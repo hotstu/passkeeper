@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Passkeeper</string>
+    <string name="backup">backup right now!</string>
+    <string name="export">export to csv</string>
+    <string name="restore">restore from backup</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="title_activity_form">FormActivity</string>
+    <string name="hint_hostname">input hostname like mail.163.com</string>
+    <string name="hint_username">username:</string>
+    <string name="hint_pwdlenth">length of pwd(6–12):</string>
+
+</resources>
