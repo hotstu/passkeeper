@@ -1,14 +1,20 @@
 package com.somebody.passkeeper;
 
 import android.os.Bundle;
+import android.text.InputType;
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.content.Intent;
 
 /**
@@ -34,14 +40,34 @@ public class WatchdogActivity extends Activity {
 
 	private void login() {
 		LayoutInflater inflater = LayoutInflater.from(this);
-		View promptView = inflater.inflate(R.layout.form, null);
-		final EditText et1 = (EditText) promptView.findViewById(R.id.form_et1);
-		final TextView tv1 = (TextView) promptView.findViewById(R.id.form_tv1);
-		tv1.setText("input master key:");
+		View promptView = inflater.inflate(R.layout.pwdform, null);
+		final EditText et1 = (EditText) promptView.findViewById(R.id.etPassword);
+		final CheckBox ckbShowPwd = (CheckBox) promptView.findViewById(R.id.cbShowPwd);
+		ckbShowPwd.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				if (!isChecked){
+					et1.setInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD);
+					et1.setTransformationMethod(PasswordTransformationMethod.getInstance());
+				}else {
+					et1.setInputType(InputType.TYPE_CLASS_TEXT);
+					et1.setTransformationMethod(null);
+				}
+				
+			}
+		});
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 		alertDialogBuilder.setView(promptView);
 		alertDialogBuilder
-				.setCancelable(false)
+				.setOnCancelListener(new OnCancelListener() {
+					
+					@Override
+					public void onCancel(DialogInterface dialog) {
+						dialog.dismiss();
+						WatchdogActivity.this.finish();
+					}
+				})
 				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 
 					@Override
@@ -86,7 +112,7 @@ public class WatchdogActivity extends Activity {
 							@Override
 							public void onClick(DialogInterface dialog,
 									int which) {
-								dialog.cancel();
+								dialog.dismiss();
 								WatchdogActivity.this.finish();
 							}
 						});
