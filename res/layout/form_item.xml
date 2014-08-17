@@ -1,56 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:padding="10dip"
     android:orientation="vertical" >
 
-    <!-- 输入框 -->
-
-    <EditText
-        android:id="@+id/form_user_et"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:maxLength="60"
-        android:paddingLeft="60.0dip"
-        android:saveEnabled="true" />
-
-    <!-- 用户名 -->
-
+    <!-- username -->
     <TextView
         android:id="@+id/form_user_tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignBaseline="@+id/form_user_et"
         android:paddingLeft="7.0dip"
         android:text="@string/hint_username"
         android:textColor="#ff3f3f3f"
         android:textSize="16.0dip" />
 
-    
-
-    <!-- 输入框 -->
-
     <EditText
-        android:id="@+id/form_user_et2"
+        android:id="@+id/form_user_et"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/form_user_et"
-        android:layout_marginTop="15dp"
-        android:maxLength="2"
-        android:text="8"
-        android:inputType="number"
-        android:paddingLeft="125.0dip"
+        android:maxLength="60"
+        android:inputType="text"
         android:saveEnabled="true" />
+
+    
+    <!-- lenth of pwd -->
     
     <TextView
         android:id="@+id/form_user_tv2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignBaseline="@+id/form_user_et2"
+        android:layout_marginTop="15dp"
         android:paddingLeft="7.0dip"
         android:text="@string/hint_pwdlenth"
         android:textColor="#ff3f3f3f"
         android:textSize="16.0dip" />
+    
+    <EditText
+        android:id="@+id/form_user_et2"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:maxLength="2"
+        android:text="8"
+        android:inputType="number"
+        android:saveEnabled="true" />
 
-</RelativeLayout>
+</LinearLayout>
