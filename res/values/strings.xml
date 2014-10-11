@@ -10,6 +10,10 @@
     <string name="hint_hostname">input hostname like mail.163.com</string>
     <string name="hint_username">Username:</string>
     <string name="hint_pwdlenth">Length of pwd(6–12):</string>
+    <string name="pls_input_host">please input host</string>
     <string name="show_pwd">show password</string>
+    <string name="success">success!</string>
+    <string name="error">error hanpened:(</string>
+    <string name="failed">failed hanpened:(</string>
 
 </resources>

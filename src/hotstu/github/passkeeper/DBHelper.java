@@ -1,9 +1,10 @@
-package com.somebody.passkeeper;
+package hotstu.github.passkeeper;
+
+import hotstu.github.passkeeper.model.Host;
+import hotstu.github.passkeeper.model.User;
 
 import java.util.ArrayList;
 
-import com.somebody.passkeeper.model.Host;
-import com.somebody.passkeeper.model.User;
 
 import android.content.ContentValues;
 import android.content.Context;

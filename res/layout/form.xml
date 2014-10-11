@@ -7,21 +7,18 @@
         android:id="@+id/form_tv1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="@string/pls_input_host"
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <EditText
         android:id="@+id/form_et1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
         android:ems="10"
         android:inputType="text" >
-
         <requestFocus />
     </EditText>
-
-
-
-
-
 
 </LinearLayout>

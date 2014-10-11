@@ -1,4 +1,4 @@
-package com.somebody.passkeeper.model;
+package hotstu.github.passkeeper.model;
 
 public class User {
 	private int _id;

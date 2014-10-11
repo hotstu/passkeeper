@@ -1,8 +1,8 @@
-package com.somebody.passkeeper;
+package hotstu.github.passkeeper;
+
 
 import android.os.Bundle;
 import android.text.InputType;
-import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.LayoutInflater;

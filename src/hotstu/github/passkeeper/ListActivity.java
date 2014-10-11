@@ -1,4 +1,7 @@
-package com.somebody.passkeeper;
+package hotstu.github.passkeeper;
+
+import hotstu.github.passkeeper.model.Host;
+import hotstu.github.passkeeper.model.User;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,16 +18,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import com.somebody.passkeeper.model.Host;
-import com.somebody.passkeeper.model.User;
 
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -40,7 +41,7 @@ import android.widget.TextView;
 import android.widget.ExpandableListView.OnChildClickListener;
 import android.widget.Toast;
 
-public class ListActivity extends Activity {
+public class ListActivity extends ActionBarActivity {
 	private MyExpandableListAdapter adapter;
 	private ExpandableListView listView;
 	private TextView btnadd;
@@ -68,8 +69,6 @@ public class ListActivity extends Activity {
 				View promptView = inflater.inflate(R.layout.form, null);
 				AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
 						ListActivity.this);
-				TextView tv = (TextView) promptView.findViewById(R.id.form_tv1);
-				tv.setText("Enter host name:");
 				final EditText et = (EditText) promptView
 						.findViewById(R.id.form_et1);
 				alertDialogBuilder.setView(promptView);
