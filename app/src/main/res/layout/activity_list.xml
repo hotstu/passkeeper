@@ -1,0 +1,22 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#f4f4f4"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/btn_add_host"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#f9f93d"
+        android:background="#000000"
+        android:padding="8dp"
+        android:textSize="17sp" />
+
+    <ExpandableListView
+        android:id="@+id/expand1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" >
+    </ExpandableListView>
+
+</LinearLayout>
