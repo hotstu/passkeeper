@@ -76,8 +76,7 @@ public class WatchdogActivity extends AppCompatActivity {
 								&& !"".equals(et1.getText().toString())) {
 							DBHelper dbh = new DBHelper(WatchdogActivity.this);
 							String hash = dbh.checkHash();
-							String input = ListActivity.md5(app.getSalt()
-									+ et1.getText().toString());
+							String input = ListActivity.md5(app.getSalt() + et1.getText().toString());
 							if (!"".equals(hash) && hash.equals(input)) {
 								app.setKey(et1.getText().toString());
 								dialog.dismiss();
@@ -87,13 +86,11 @@ public class WatchdogActivity extends AppCompatActivity {
 								WatchdogActivity.this.finish();
 							} else if ("".equals(hash)) {
 								//the first time running this app
-								String newhash = ListActivity.md5(app.getSalt()
-										+ et1.getText().toString());
+								String newhash = ListActivity.md5(app.getSalt() + et1.getText().toString());
 								dbh.addHash(newhash);
 								app.setKey(et1.getText().toString());
 								dialog.dismiss();
-								Intent i = new Intent(getApplicationContext(),
-										ListActivity.class);
+								Intent i = new Intent(getApplicationContext(), ListActivity.class);
 								startActivity(i);
 								WatchdogActivity.this.finish();
 							} else {

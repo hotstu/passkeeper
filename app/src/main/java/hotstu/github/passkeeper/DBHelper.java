@@ -49,18 +49,32 @@ public class DBHelper extends SQLiteOpenHelper {
 	/**
 	 * 
 	 * @param host
-	 * @return true when insert success,or false when failed
+	 * @return newId;
 	 */
-	public boolean addHost(Host host) {
+	public long addHost(Host host) {
 		SQLiteDatabase db = this.getWritableDatabase();
 		ContentValues values = new ContentValues();
 		values.put("hostname", host.getHostname());
 		long result = db.insert(TABLE_HOST, null, values);
 		db.close();
-		return result >= 0;
+		return result;
 	}
 
-	public boolean addUser(User user) {
+	public Host findHostById(long id) {
+		String selectQuery = "SELECT _id,hostname FROM hosts WHERE _id = " + id;
+
+		SQLiteDatabase db = this.getReadableDatabase();
+		Cursor cursor = db.rawQuery(selectQuery, null);
+		Host ret = null;
+		if (cursor.moveToFirst()) {
+			ret = new Host(cursor.getInt(0), cursor.getString(1));
+		}
+		cursor.close();
+		db.close();
+		return ret;
+	}
+
+	public long addUser(User user) {
 		SQLiteDatabase db = this.getWritableDatabase();
 		ContentValues values = new ContentValues();
 		values.put("username", user.getUsername());
@@ -68,7 +82,20 @@ public class DBHelper extends SQLiteOpenHelper {
 		values.put("hostid", user.getHostId());
 		long result = db.insert(TABLE_NAME, null, values);
 		db.close();
-		return result >= 0;
+		return result;
+	}
+
+	public User findUserById(long id) {
+		String selectQuery = "SELECT _id,username,pwdlenth,hostid FROM users WHERE _id = " + id;
+		SQLiteDatabase db = this.getReadableDatabase();
+		Cursor cursor = db.rawQuery(selectQuery, null);
+		User ret = null;
+		if (cursor.moveToFirst()) {
+			ret = new User(cursor.getInt(0), cursor.getString(1), cursor.getInt(2), cursor.getInt(3));
+		}
+		cursor.close();
+		db.close();
+		return ret;
 	}
 
 	/**
@@ -92,7 +119,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	}
 
 	public ArrayList<Host> queryAllHosts() {
-		ArrayList<Host> list = new ArrayList<Host>();
+		ArrayList<Host> list = new ArrayList<>();
 		// Select All Query
 		String selectQuery = "SELECT _id,hostname FROM hosts";
 
@@ -111,7 +138,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	}
 
 	public ArrayList<User> queryAllUsers() {
-		ArrayList<User> list = new ArrayList<User>();
+		ArrayList<User> list = new ArrayList<>();
 		// Select All Query
 		String selectQuery = "SELECT _id,username,pwdlenth,hostid FROM users";
 
