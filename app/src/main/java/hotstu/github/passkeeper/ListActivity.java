@@ -43,8 +43,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-import hotstu.github.passkeeper.model.Host;
-import hotstu.github.passkeeper.model.User;
+import hotstu.github.passkeeper.db.AppDatabase;
+import hotstu.github.passkeeper.db.HostEntity;
+import hotstu.github.passkeeper.db.UserEntity;
 import hotstu.github.passkeeper.tree.Child;
 import hotstu.github.passkeeper.tree.Node;
 import hotstu.github.passkeeper.tree.Parent;
@@ -58,12 +59,14 @@ public class ListActivity extends AppCompatActivity {
     private Myapp app;
     TreeAdapter<VH, Item> mAdapter;
     private int widthPixel;
+    private AppDatabase db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
         app = (Myapp) getApplication();
+        db = AppDatabase.getInMemoryDatabase(getApplicationContext());
         btnAdd = findViewById(R.id.btn_add_host);
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -121,47 +124,21 @@ public class ListActivity extends AppCompatActivity {
     }
 
     void inflateData() {
-        ArrayList<Host> hosts;
-        ArrayList<User> users;
-        SparseArray<ArrayList<User>> hostId2Users;
-        hosts = new ArrayList<>();
-        hostId2Users = new SparseArray<>();
-        users = new ArrayList<>();
-
-        DBHelper dbh = new DBHelper(this);
-        ArrayList<Host> retHosts = dbh.queryAllHosts();
-        ArrayList<User> retUsers = dbh.queryAllUsers();
-        hosts.addAll(retHosts);
-        users.addAll(retUsers);
-        SparseArray<Host> tempHostMapping = new SparseArray<>();
-        for (int i = 0; i < retHosts.size(); i++) {
-            Host host = retHosts.get(i);
-            hostId2Users.put(host.get_id(), new ArrayList<User>());
-            tempHostMapping.put(host.get_id(), host);
-            //this.hostId2Users.get(host.get_id()).add(new User(-1, "+", -1, -1));
-        }
-        for (int i = 0; i < retUsers.size(); i++) {
-            User user = retUsers.get(i);
-            List<User> tempusers = hostId2Users.get(user.getHostId());
-            if (tempusers != null) {
-                tempusers.add(user);
-            }
-        }
-
+        List<HostEntity> retHosts = db.HostModel().queryAllHosts();
         List<Item> items = new ArrayList<>();
-        for (int i = 0; i < hosts.size(); i++) {
-            Host host = hosts.get(i);
+        for (int i = 0; i < retHosts.size(); i++) {
+            HostEntity host = retHosts.get(i);
             HostItem itemhost = new HostItem();
             itemhost.setData(host);
             UserItem addUser = new UserItem();
-            addUser.setData(new User(-1, "+", -1, -1));
+            addUser.setData(new UserEntity(-1, "+", -1, -1));
             itemhost.addChild(addUser, 0);
-            ArrayList<User> tempusers = hostId2Users.get(host.get_id());
+            List<UserEntity> tempusers = db.UserModel().findUsersByHostId(host.id);
             if (tempusers != null) {
                 ArrayList<UserItem> useritems = new ArrayList<>();
                 for (int j = 0; j < tempusers.size(); j++) {
                     UserItem userItem = new UserItem();
-                    userItem.setData(users.get(j));
+                    userItem.setData(tempusers.get(j));
                     useritems.add(userItem);
                 }
                 itemhost.addChildren(useritems);
@@ -180,50 +157,50 @@ public class ListActivity extends AppCompatActivity {
         String getText();
     }
 
-    static class HostItem extends Parent implements Item<Host> {
-        private Host data;
+    static class HostItem extends Parent implements Item<HostEntity> {
+        private HostEntity data;
 
         public HostItem() {
         }
-        public HostItem(Host data) {
+        public HostItem(HostEntity data) {
             this.data = data;
         }
         @Override
-        public void setData(Host data) {
+        public void setData(HostEntity data) {
             this.data = data;
         }
 
         @Override
-        public Host getData() {
+        public HostEntity getData() {
             return data;
         }
 
         @Override
         public String getText() {
-            return data.getHostname();
+            return data.hostname;
         }
     }
 
-    static class UserItem extends Child implements Item<User> {
-        private User data;
+    static class UserItem extends Child implements Item<UserEntity> {
+        private UserEntity data;
         public UserItem() {
         }
-        public UserItem(User data) {
+        public UserItem(UserEntity data) {
             this.data = data;
         }
         @Override
-        public void setData(User data) {
+        public void setData(UserEntity data) {
             this.data = data;
         }
 
         @Override
-        public User getData() {
+        public UserEntity getData() {
             return data;
         }
 
         @Override
         public String getText() {
-            return data.getUsername();
+            return data.username;
         }
     }
 
@@ -290,14 +267,13 @@ public class ListActivity extends AppCompatActivity {
                                     Toast.makeText(ListActivity.this, "error", Toast.LENGTH_LONG).show();
                                     return;
                                 }
-                                DBHelper dbh = new DBHelper(ListActivity.this);
                                 long id;
-                                if ( (id = dbh.addHost(new Host(999, hostname))) > 0) {
+                                if ( (id = db.HostModel().addHost(new HostEntity(0, hostname))) > 0) {
                                     Toast.makeText(ListActivity.this, "succeed", Toast.LENGTH_LONG).show();
-                                    Host added = dbh.findHostById(id);
+                                    HostEntity added = db.HostModel().findHostById(id);
                                     if (added != null) {
                                         HostItem hostItem = new HostItem(added);
-                                        hostItem.addChild(new UserItem(new User(-1, "+", -1, -1)), 0);
+                                        hostItem.addChild(new UserItem(new UserEntity(-1, "+", -1, -1)), 0);
                                         mAdapter.addItem(null, hostItem, -1);
                                     }
                                 } else {
@@ -319,7 +295,7 @@ public class ListActivity extends AppCompatActivity {
     }
 
     public boolean onChildClick(UserItem child) {
-        if (child.getData().get_id() < 0) {
+        if (child.getData().id <= 0) {
             showAddUser(child);
         } else {
             generatePwd(child);
@@ -353,12 +329,11 @@ public class ListActivity extends AppCompatActivity {
                             Toast.makeText(ListActivity.this, "bad input", Toast.LENGTH_LONG).show();
                             return;
                         }
-                        DBHelper dbh = new DBHelper(ListActivity.this);
-                        long id = dbh.addUser(new User(-1, username, pwdlenth, host.getData().get_id()));
+                       long id = db.UserModel().addUser(new UserEntity(0, username, pwdlenth, host.getData().id));
                         if (id > 0) {
                             Toast.makeText(ListActivity.this, "succeed", Toast.LENGTH_LONG).show();
                             // refresh data;
-                            User added = dbh.findUserById(id);
+                            UserEntity added = db.UserModel().findUserById(id);
                             if (added != null) {
                                 UserItem userItem = new UserItem(added);
                                 mAdapter.addItem(host, userItem, -1);
@@ -392,14 +367,12 @@ public class ListActivity extends AppCompatActivity {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     if (item instanceof UserItem) {
-                                        DBHelper dbh = new DBHelper(ListActivity.this);
-                                        int count = dbh.delUser((User) item.getData());
+                                        int count = db.UserModel().delUser((UserEntity) item.getData());
                                         Toast.makeText(ListActivity.this, count + " row(s) deleted", Toast.LENGTH_LONG).show();
                                         mAdapter.removeItem(item);
                                     }
                                     else {
-                                        DBHelper dbh = new DBHelper(ListActivity.this);
-                                        int count = dbh.delHost((Host) item.getData());
+                                        int count =  db.HostModel().delHost((HostEntity) item.getData());
                                         Toast.makeText(ListActivity.this, count + " row(s) deleted", Toast.LENGTH_LONG).show();
                                         mAdapter.removeItem(item);
                                     }
@@ -477,6 +450,7 @@ public class ListActivity extends AppCompatActivity {
 
     @RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     private boolean restore() {
+        // FIXME 兼容老的数据库
 		File dir = new File(Environment.getExternalStorageDirectory(), "passkeeperbackup");
 		if (!dir.exists()) {
 			Toast.makeText(this, "backup dir not exists!", Toast.LENGTH_LONG).show();
@@ -526,25 +500,24 @@ public class ListActivity extends AppCompatActivity {
 
 	@RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 	private void export(){
-        ArrayList<Host> hosts;
-        SparseArray<ArrayList<User>> hostId2Users;
+        ArrayList<HostEntity> hosts;
+        SparseArray<ArrayList<UserEntity>> hostId2Users;
         hosts = new ArrayList<>();
         hostId2Users = new SparseArray<>();
 
-        DBHelper dbh = new DBHelper(this);
-        ArrayList<Host> retHosts = dbh.queryAllHosts();
-        ArrayList<User> retUsers = dbh.queryAllUsers();
+        List<HostEntity> retHosts = db.HostModel().queryAllHosts();
+        List<UserEntity> retUsers = db.UserModel().queryAllUsers();
         hosts.addAll(retHosts);
-        SparseArray<Host> tempHostMapping = new SparseArray<>();
+        SparseArray<HostEntity> tempHostMapping = new SparseArray<>();
         for (int i = 0; i < retHosts.size(); i++) {
-            Host host = retHosts.get(i);
-            hostId2Users.put(host.get_id(), new ArrayList<User>());
-            tempHostMapping.put(host.get_id(), host);
+            HostEntity host = retHosts.get(i);
+            hostId2Users.put(host.id, new ArrayList<UserEntity>());
+            tempHostMapping.put(host.id, host);
             //this.hostId2Users.get(host.get_id()).add(new User(-1, "+", -1, -1));
         }
         for (int i = 0; i < retUsers.size(); i++) {
-            User user = retUsers.get(i);
-            List<User> tempusers = hostId2Users.get(user.getHostId());
+            UserEntity user = retUsers.get(i);
+            List<UserEntity> tempusers = hostId2Users.get(user.hostId);
             if (tempusers != null) {
                 tempusers.add(user);
             }
@@ -557,15 +530,15 @@ public class ListActivity extends AppCompatActivity {
         File csv = new File(b, "/export"+System.currentTimeMillis()+".csv");
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter(csv, true));
-            for (Host tmp : hosts) {
-                String hostname = tmp.getHostname();
-                ArrayList<User> tmpusers = hostId2Users.get(tmp.get_id());
-                for (User tmpu : tmpusers) {
-                    if (tmpu.get_id() == -1) continue;
-                    String username = tmpu.getUsername();
+            for (HostEntity tmp : hosts) {
+                String hostname = tmp.hostname;
+                ArrayList<UserEntity> tmpusers = hostId2Users.get(tmp.id);
+                for (UserEntity tmpu : tmpusers) {
+                    if (tmpu.id <= 0) continue;
+                    String username = tmpu.username;
                     String key = app.getKey();
                     String hash = md5(hostname + username + key);
-                    String pwd = hash.substring(0, tmpu.getPwdLength());
+                    String pwd = hash.substring(0, tmpu.pwdLength);
                     bw.newLine();
                     bw.write(hostname + "," + username + "," + pwd);
                 }
@@ -582,7 +555,7 @@ public class ListActivity extends AppCompatActivity {
 	private void generatePwd(UserItem item) {
         String hostname = ((HostItem) item.getParent()).getText();
         String username = item.getText();
-        int len = item.getData().getPwdLength();
+        int len = item.getData().pwdLength;
 		String key = app.getKey();
 		String hash = md5(hostname + username + key);
 		String pwd = hash.substring(0, len);
