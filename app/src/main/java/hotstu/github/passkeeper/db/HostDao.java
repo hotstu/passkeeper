@@ -18,12 +18,12 @@ public interface HostDao {
     @Insert(onConflict = IGNORE)
     long addHost(HostEntity host);
 
-    @Query("select * from hosts where _id = :id")
+    @Query("select * from host where _id = :id")
     HostEntity findHostById(long id);
 
     @Delete
     int delHost(HostEntity host);
 
-    @Query("select * from hosts")
+    @Query("select * from host")
     List<HostEntity> queryAllHosts();
 }

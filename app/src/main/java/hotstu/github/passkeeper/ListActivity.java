@@ -1,6 +1,7 @@
 package hotstu.github.passkeeper;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -425,8 +426,6 @@ public class ListActivity extends AppCompatActivity {
 			return true;
 		}
         return super.onOptionsItemSelected(item);
-
-
 	}
 
 
@@ -448,6 +447,7 @@ public class ListActivity extends AppCompatActivity {
 		startActivity(intent);
 	}
 
+    @SuppressLint("MissingPermission")
     @RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     private boolean restore() {
         // FIXME 兼容老的数据库
@@ -475,9 +475,11 @@ public class ListActivity extends AppCompatActivity {
 		}
 
 		String dst = this.getDatabasePath("passkeeper.db").getAbsolutePath();
+        FileInputStream finput = null;
+        OutputStream foutput = null;
 		try {
-			FileInputStream finput = new FileInputStream(lastbackup);
-			OutputStream foutput = new FileOutputStream(dst);
+			finput = new FileInputStream(lastbackup);
+            foutput = new FileOutputStream(dst);
 
 			// Transfer bytes from the inputfile to the outputfile
 			byte[] buffer = new byte[1024];
@@ -485,16 +487,29 @@ public class ListActivity extends AppCompatActivity {
 			while ((length = finput.read(buffer)) > 0) {
 				foutput.write(buffer, 0, length);
 			}
-
-			// Close the streams
-			foutput.flush();
-			foutput.close();
-			finput.close();
+            foutput.flush();
 		} catch (Exception e) {
 			Toast.makeText(this, "failed"+e.getMessage(), Toast.LENGTH_LONG).show();
 			return false;
-		}
-		Toast.makeText(this, "restore succeed!", Toast.LENGTH_LONG).show();
+		} finally {
+            // Close the streams
+            if (foutput != null) {
+                try {
+                    foutput.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (finput != null) {
+                try {
+                    finput.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
+        Toast.makeText(this, "restore succeed!", Toast.LENGTH_LONG).show();
 		return true;
 	}
 
@@ -526,7 +541,7 @@ public class ListActivity extends AppCompatActivity {
 		if (!b.exists() && !b.mkdirs()) {
             Toast.makeText(this, "无法访问sd卡", Toast.LENGTH_LONG).show();
             return;
-        };
+        }
         File csv = new File(b, "/export"+System.currentTimeMillis()+".csv");
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter(csv, true));

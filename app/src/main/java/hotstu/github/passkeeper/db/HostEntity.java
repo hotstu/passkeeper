@@ -8,7 +8,7 @@ import android.arch.persistence.room.PrimaryKey;
  * @author hglf
  * @since 2017/12/28
  */
-@Entity(tableName = "hosts")
+@Entity(tableName = "host")
 public class HostEntity {
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "_id")

@@ -12,7 +12,7 @@ import static android.arch.persistence.room.OnConflictStrategy.IGNORE;
  */
 @Dao
 public interface HashDao {
-    @Query("select hash from master limit 1")
+    @Query("select hash from hash limit 1")
     String checkHash();
 
     @Insert(onConflict = IGNORE)

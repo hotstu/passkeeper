@@ -18,15 +18,15 @@ public interface UserDao {
     @Insert(onConflict = IGNORE)
     long addUser(UserEntity user);
 
-    @Query("select * from users where _id = :id")
+    @Query("select * from user where _id = :id")
     UserEntity findUserById(long id);
 
-    @Query("select * from users where hostId = :id")
+    @Query("select * from user where hostId = :id")
     List<UserEntity> findUsersByHostId(int id);
 
     @Delete
     int delUser(UserEntity user);
 
-    @Query("select * from users")
+    @Query("select * from user")
     List<UserEntity> queryAllUsers();
 }

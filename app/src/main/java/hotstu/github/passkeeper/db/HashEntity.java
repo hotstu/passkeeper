@@ -8,7 +8,7 @@ import android.arch.persistence.room.PrimaryKey;
  * @author hglf
  * @since 2017/12/28
  */
-@Entity(tableName = "master")
+@Entity(tableName = "hash")
 public class HashEntity {
 
 
