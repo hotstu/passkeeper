@@ -60,9 +60,11 @@ public abstract class AppDatabase extends RoomDatabase {
         @Override
         public void migrate(SupportSQLiteDatabase _db) {
             //copy form generated sql by room
-            _db.execSQL("CREATE TABLE IF NOT EXISTS `user` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `username` TEXT, `pwdLength` INTEGER NOT NULL, `hostId` INTEGER NOT NULL, FOREIGN KEY(`hostId`) REFERENCES `host`(`_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )");
+            _db.execSQL("CREATE TABLE IF NOT EXISTS `user` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `username` TEXT, `pwdLength` INTEGER NOT NULL, `hostId` INTEGER NOT NULL, FOREIGN KEY(`hostId`) REFERENCES `host`(`_id`) ON UPDATE CASCADE ON DELETE CASCADE )");
+            _db.execSQL("CREATE  INDEX `index_user_hostId` ON `user` (`hostId`)");
             _db.execSQL("CREATE TABLE IF NOT EXISTS `host` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `hostname` TEXT)");
             _db.execSQL("CREATE TABLE IF NOT EXISTS `hash` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `hash` TEXT)");
+
             //
             _db.execSQL("INSERT  INTO `user` SELECT `_id` AS `_id`, `username` AS `username`, `pwdlenth` AS `pwdLength`, `hostid` AS `hostId` FROM `users` ");
             _db.execSQL("INSERT  INTO `host` SELECT `_id` AS `_id`, `hostname` AS `hostname` FROM `hosts` ");

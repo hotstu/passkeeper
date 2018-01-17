@@ -112,6 +112,9 @@ public class Parent implements Node {
         return RecyclerView.NO_POSITION;
     }
 
+    public LinkedList<Node> getChildren() {
+        return children;
+    }
 
     @Override
     public void setParent(Parent parent) {

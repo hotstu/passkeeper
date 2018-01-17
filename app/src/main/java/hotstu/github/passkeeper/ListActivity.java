@@ -2,26 +2,29 @@ package hotstu.github.passkeeper;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Rect;
+import android.databinding.DataBindingUtil;
+import android.databinding.ViewDataBinding;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.RequiresPermission;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -38,45 +41,45 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
-import hotstu.github.passkeeper.db.AppDatabase;
+import hotstu.github.passkeeper.databinding.ActivityListBinding;
 import hotstu.github.passkeeper.db.HostEntity;
 import hotstu.github.passkeeper.db.UserEntity;
 import hotstu.github.passkeeper.tree.Child;
 import hotstu.github.passkeeper.tree.Node;
 import hotstu.github.passkeeper.tree.Parent;
+import hotstu.github.passkeeper.viewmodel.ListViewModel;
+import hotstu.github.passkeeper.widget.AdapterCallback;
 import hotstu.github.passkeeper.widget.TreeAdapter;
+import io.reactivex.observers.DisposableObserver;
 
 public class ListActivity extends AppCompatActivity {
     private static final String TAG = "ListActivity";
-    private RecyclerView mRecylcerView;
-    private View btnAdd;
 
-    private Myapp app;
     TreeAdapter<VH, Item> mAdapter;
-    private int widthPixel;
-    private AppDatabase db;
+    private ActivityListBinding binding;
+    private ListViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_list);
-        app = (Myapp) getApplication();
-        db = AppDatabase.getInMemoryDatabase(getApplicationContext());
-        btnAdd = findViewById(R.id.btn_add_host);
-        btnAdd.setOnClickListener(new View.OnClickListener() {
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_list);
+        if (PassKeepApp.sInstance.isStale()) {
+            Intent i=  new Intent(this, WatchdogActivity.class);
+            i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+            finish();
+        }
+        viewModel = ViewModelProviders.of(this).get(ListViewModel.class);
+        binding.btnAddHost.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 showAddParent();
             }
         });
-        mRecylcerView = (RecyclerView) findViewById(R.id.list);
-        mRecylcerView.setLayoutManager(new LinearLayoutManager(this) {
+        binding.list.setLayoutManager(new LinearLayoutManager(this) {
             @Override
             public boolean supportsPredictiveItemAnimations() {
                 return true;
@@ -86,9 +89,9 @@ public class ListActivity extends AppCompatActivity {
         mAdapter = new TreeAdapter<>(new TreeAdapter.AdapterDelegate<VH, Item>() {
             @Override
             public VH onCreateViewHolder(TreeAdapter<VH, Item> adapter, ViewGroup parent, int viewType) {
-                LayoutInflater inflater = LayoutInflater.from(parent.getContext());
                 int resId = viewType == 0 ? R.layout.list_item : R.layout.list_group;
-                return new VH(inflater.inflate(resId, parent, false));
+                ViewDataBinding binding = DataBindingUtil.inflate(LayoutInflater.from(parent.getContext()), resId, parent, false);
+                return new VH(binding.getRoot(), binding);
             }
 
             @Override
@@ -107,58 +110,49 @@ public class ListActivity extends AppCompatActivity {
             }
         });
 
-        mRecylcerView.setAdapter(mAdapter);
-        widthPixel = (int) (getResources().getDimension(R.dimen.activity_horizontal_margin) *2);
+        binding.list.setAdapter(mAdapter);
         DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(this, LinearLayoutManager.VERTICAL);
         Drawable drawable =  ContextCompat.getDrawable(this, R.drawable.divider);
         dividerItemDecoration.setDrawable(drawable);
-        mRecylcerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+        suscribeData();
+    }
+
+    void suscribeData() {
+
+        viewModel.getItems().observe(this, new Observer<List<Item>>() {
             @Override
-            public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
-                VH vh = (VH) parent.getChildViewHolder(view);
-                Node node = vh.getData();
-                outRect.left = widthPixel * (node.getIndent() - 1);
+            public void onChanged(@Nullable List<Item> items) {
+                mAdapter.clearDataSet();
+                for (int i = 0; i < items.size(); i++) {
+                    Item item = items.get(i);
+                    if (item instanceof HostItem) {
+
+                        HostItem host = (HostItem) item;
+                        if(host.getChildCount() == 0 ){
+                            host.addChild(new UserItem(new UserEntity(0, "+", 0, 0)), 0);
+                        } else {
+                            UserItem user = (UserItem) host.findItem(1);
+                            if (user.getData().id != 0) {
+                                host.addChild(new UserItem(new UserEntity(0, "+", 0, 0)), 0);
+                            }
+
+                        }
+                    }
+                }
+                mAdapter.setDataSet(items);
             }
         });
 
-        inflateData();
-    }
-
-    void inflateData() {
-        List<HostEntity> retHosts = db.HostModel().queryAllHosts();
-        List<Item> items = new ArrayList<>();
-        for (int i = 0; i < retHosts.size(); i++) {
-            HostEntity host = retHosts.get(i);
-            HostItem itemhost = new HostItem();
-            itemhost.setData(host);
-            UserItem addUser = new UserItem();
-            addUser.setData(new UserEntity(-1, "+", -1, -1));
-            itemhost.addChild(addUser, 0);
-            List<UserEntity> tempusers = db.UserModel().findUsersByHostId(host.id);
-            if (tempusers != null) {
-                ArrayList<UserItem> useritems = new ArrayList<>();
-                for (int j = 0; j < tempusers.size(); j++) {
-                    UserItem userItem = new UserItem();
-                    userItem.setData(tempusers.get(j));
-                    useritems.add(userItem);
-                }
-                itemhost.addChildren(useritems);
-            }
-            items.add(itemhost);
-        }
-        mAdapter.clearDataSet();
-        mAdapter.setDataSet(items);
-
     }
 
 
-    interface Item<T> extends Node {
+    public interface Item<T> extends Node {
         void setData(T data);
         T getData();
         String getText();
     }
 
-    static class HostItem extends Parent implements Item<HostEntity> {
+    public static class HostItem extends Parent implements Item<HostEntity> {
         private HostEntity data;
 
         public HostItem() {
@@ -182,7 +176,7 @@ public class ListActivity extends AppCompatActivity {
         }
     }
 
-    static class UserItem extends Child implements Item<UserEntity> {
+    public static class UserItem extends Child implements Item<UserEntity> {
         private UserEntity data;
         public UserItem() {
         }
@@ -205,45 +199,41 @@ public class ListActivity extends AppCompatActivity {
         }
     }
 
+    AdapterCallback adapterCallback = new AdapterCallback() {
 
-    class VH extends RecyclerView.ViewHolder implements View.OnClickListener, View.OnLongClickListener {
+        @Override
+        public void onClick(Node item) {
+            if(!item.isLeaf()) {
+                Parent parent = (Parent) item;
+                mAdapter.toggle(parent);
+            } else {
+                UserItem child = (UserItem) item;
+                if (child.getData().id <= 0) {
+                    showAddUser(child);
+                } else {
+                    generatePwd(child);
+                }
+            }
+        }
 
-        TextView tv;
-        Item item;
-        public VH(View itemView) {
+        @Override
+        public boolean onLongClick(Node item) {
+            return onChildLongClick((Item) item);
+        }
+    };
+
+    class VH extends RecyclerView.ViewHolder {
+
+        final ViewDataBinding binding;
+        public VH(View itemView, ViewDataBinding binding) {
             super(itemView);
-            tv = (TextView) itemView.findViewById(android.R.id.text1);
-            itemView.setOnClickListener(this);
-            itemView.setOnLongClickListener(this);
+            this.binding = binding;
         }
 
         public void bindData(Item item) {
-            this.item = item;
-            this.tv.setText(item.getText());
-        }
-
-        public Item getData(){
-            return item;
-        }
-
-        @Override
-        public void onClick(View v) {
-            int position = this.getAdapterPosition();
-            if (position == RecyclerView.NO_POSITION) {
-                return;
-            }
-            Node item = getData();
-            if(!item.isLeaf()) {
-                Parent parent = (Parent) item;
-                mAdapter.toggle(parent, position);
-            } else {
-                onChildClick((UserItem) item);
-            }
-        }
-
-        @Override
-        public boolean onLongClick(View v) {
-            return onChildLongClick(getData());
+            binding.setVariable(BR.item, item);
+            binding.setVariable(BR.adapterCallback, adapterCallback);
+            binding.executePendingBindings();
         }
     }
 
@@ -253,7 +243,7 @@ public class ListActivity extends AppCompatActivity {
         LayoutInflater inflater = LayoutInflater.from(ListActivity.this);
         View promptView = inflater.inflate(R.layout.form, null);
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ListActivity.this);
-        final EditText et = (EditText) promptView.findViewById(R.id.form_et1);
+        final EditText et = promptView.findViewById(R.id.form_et1);
         alertDialogBuilder.setView(promptView);
         alertDialogBuilder
                 .setCancelable(false)
@@ -268,15 +258,8 @@ public class ListActivity extends AppCompatActivity {
                                     Toast.makeText(ListActivity.this, "error", Toast.LENGTH_LONG).show();
                                     return;
                                 }
-                                long id;
-                                if ( (id = db.HostModel().addHost(new HostEntity(0, hostname))) > 0) {
+                                if ( (Injection.getDataBase().HostModel().addHost(new HostEntity(0, hostname))) > 0) {
                                     Toast.makeText(ListActivity.this, "succeed", Toast.LENGTH_LONG).show();
-                                    HostEntity added = db.HostModel().findHostById(id);
-                                    if (added != null) {
-                                        HostItem hostItem = new HostItem(added);
-                                        hostItem.addChild(new UserItem(new UserEntity(-1, "+", -1, -1)), 0);
-                                        mAdapter.addItem(null, hostItem, -1);
-                                    }
                                 } else {
                                     Toast.makeText(ListActivity.this, "failed", Toast.LENGTH_LONG).show();
                                 }
@@ -295,21 +278,13 @@ public class ListActivity extends AppCompatActivity {
         diaolog.show();
     }
 
-    public boolean onChildClick(UserItem child) {
-        if (child.getData().id <= 0) {
-            showAddUser(child);
-        } else {
-            generatePwd(child);
-        }
-        return true;
-    }
 
     void showAddUser(UserItem child) {
         final HostItem host = ((HostItem) child.getParent());
         LayoutInflater inflater = LayoutInflater.from(ListActivity.this);
         View promptView = inflater.inflate(R.layout.form_item, null);
-        final EditText et1 = (EditText) promptView.findViewById(R.id.form_user_et);
-        final EditText et2 = (EditText) promptView.findViewById(R.id.form_user_et2);
+        final EditText et1 = promptView.findViewById(R.id.form_user_et);
+        final EditText et2 = promptView.findViewById(R.id.form_user_et2);
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ListActivity.this);
         alertDialogBuilder.setView(promptView);
         alertDialogBuilder.setPositiveButton("OK",
@@ -330,15 +305,9 @@ public class ListActivity extends AppCompatActivity {
                             Toast.makeText(ListActivity.this, "bad input", Toast.LENGTH_LONG).show();
                             return;
                         }
-                       long id = db.UserModel().addUser(new UserEntity(0, username, pwdlenth, host.getData().id));
+                       long id = Injection.getDataBase().UserModel().addUser(new UserEntity(0, username, pwdlenth, host.getData().id));
                         if (id > 0) {
                             Toast.makeText(ListActivity.this, "succeed", Toast.LENGTH_LONG).show();
-                            // refresh data;
-                            UserEntity added = db.UserModel().findUserById(id);
-                            if (added != null) {
-                                UserItem userItem = new UserItem(added);
-                                mAdapter.addItem(host, userItem, -1);
-                            }
                         } else {
                             Toast.makeText(ListActivity.this, "failed", Toast.LENGTH_LONG).show();
                         }
@@ -368,14 +337,13 @@ public class ListActivity extends AppCompatActivity {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     if (item instanceof UserItem) {
-                                        int count = db.UserModel().delUser((UserEntity) item.getData());
+                                        int count = Injection.getDataBase().UserModel().delUser((UserEntity) item.getData());
                                         Toast.makeText(ListActivity.this, count + " row(s) deleted", Toast.LENGTH_LONG).show();
-                                        mAdapter.removeItem(item);
                                     }
                                     else {
-                                        int count =  db.HostModel().delHost((HostEntity) item.getData());
+                                        HostEntity data = (HostEntity) item.getData();
+                                        int count =  Injection.getDataBase().HostModel().delHost(data);
                                         Toast.makeText(ListActivity.this, count + " row(s) deleted", Toast.LENGTH_LONG).show();
-                                        mAdapter.removeItem(item);
                                     }
                             }})
                     .setNegativeButton("No", null).show();
@@ -386,7 +354,6 @@ public class ListActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        Log.d("ListActivity", "onBackPressed");
         System.exit(0);
     }
 
@@ -413,7 +380,7 @@ public class ListActivity extends AppCompatActivity {
                 return true;
             }
 			if (restore()){
-				inflateData();
+				suscribeData();
 			}
 			return true;
 		}
@@ -441,7 +408,7 @@ public class ListActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setAction(Intent.ACTION_SEND)
 				.setType("*/*")
-				.putExtra(android.content.Intent.EXTRA_EMAIL, new String[]{app.getEmail()})
+				.putExtra(android.content.Intent.EXTRA_EMAIL, new String[]{PassKeepApp.sInstance.getEmail()})
 				.putExtra(android.content.Intent.EXTRA_SUBJECT, "dbbackup" + System.currentTimeMillis())
 				.putExtra(Intent.EXTRA_STREAM, uri);
 		startActivity(intent);
@@ -513,66 +480,74 @@ public class ListActivity extends AppCompatActivity {
 		return true;
 	}
 
-	@RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 	private void export(){
-        ArrayList<HostEntity> hosts;
-        SparseArray<ArrayList<UserEntity>> hostId2Users;
-        hosts = new ArrayList<>();
-        hostId2Users = new SparseArray<>();
+        io.reactivex.Observable.just(viewModel.getItems().getValue())
+                .map(new io.reactivex.functions.Function<List<Item>, Boolean>() {
+                    @Override
+                    public Boolean apply(List<Item> items) throws Exception {
+                        File b = new File(Environment.getExternalStorageDirectory(), "passkeeperbackup");
+                        File csv = new File(b, "/export"+System.currentTimeMillis()+".csv");
+                        csv.getParentFile().mkdirs();
+                        BufferedWriter bw = null;
+                        try {
+                            bw = new BufferedWriter(new FileWriter(csv, false));
+                            for (Item tmp : items) {
+                                HostItem host = ((HostItem) tmp);
+                                String hostname = host.getText();
+                                LinkedList<Node> tmpusers = host.getChildren();
+                                for (Node tmpu : tmpusers) {
+                                    UserItem user = ((UserItem) tmpu);
+                                    UserEntity userEntity = user.getData();
+                                    if (userEntity.id <= 0) continue;
+                                    String username = userEntity.username;
+                                    String key = PassKeepApp.sInstance.getKey();
+                                    String hash = Util.md5(hostname + username + key);
+                                    String pwd = hash.substring(0, userEntity.pwdLength);
+                                    bw.newLine();
+                                    bw.write(hostname + "," + username + "," + pwd);
+                                }
+                            }
+                            return true;
+                        }
+                        finally {
+                            if (bw != null) {
+                                bw.close();
+                            }
+                        }
+                    }
+                })
+                .subscribe(new DisposableObserver<Boolean>() {
+            @Override
+            public void onNext(Boolean items) {
+                Toast.makeText(ListActivity.this,
+                        "export succeed,check the dir:\"passkeeperbackup\" on sdcard! ",
+                        Toast.LENGTH_LONG).show();
+            }
 
-        List<HostEntity> retHosts = db.HostModel().queryAllHosts();
-        List<UserEntity> retUsers = db.UserModel().queryAllUsers();
-        hosts.addAll(retHosts);
-        SparseArray<HostEntity> tempHostMapping = new SparseArray<>();
-        for (int i = 0; i < retHosts.size(); i++) {
-            HostEntity host = retHosts.get(i);
-            hostId2Users.put(host.id, new ArrayList<UserEntity>());
-            tempHostMapping.put(host.id, host);
-            //this.hostId2Users.get(host.get_id()).add(new User(-1, "+", -1, -1));
-        }
-        for (int i = 0; i < retUsers.size(); i++) {
-            UserEntity user = retUsers.get(i);
-            List<UserEntity> tempusers = hostId2Users.get(user.hostId);
-            if (tempusers != null) {
-                tempusers.add(user);
+            @Override
+            public void onError(Throwable e) {
+                e.printStackTrace();
+                Toast.makeText(ListActivity.this,
+                        "出错：" + e.getMessage(),
+                        Toast.LENGTH_LONG).show();
             }
-        }
-        File b = new File(Environment.getExternalStorageDirectory(), "passkeeperbackup");
-		if (!b.exists() && !b.mkdirs()) {
-            Toast.makeText(this, "无法访问sd卡", Toast.LENGTH_LONG).show();
-            return;
-        }
-        File csv = new File(b, "/export"+System.currentTimeMillis()+".csv");
-		try {
-			BufferedWriter bw = new BufferedWriter(new FileWriter(csv, true));
-            for (HostEntity tmp : hosts) {
-                String hostname = tmp.hostname;
-                ArrayList<UserEntity> tmpusers = hostId2Users.get(tmp.id);
-                for (UserEntity tmpu : tmpusers) {
-                    if (tmpu.id <= 0) continue;
-                    String username = tmpu.username;
-                    String key = app.getKey();
-                    String hash = md5(hostname + username + key);
-                    String pwd = hash.substring(0, tmpu.pwdLength);
-                    bw.newLine();
-                    bw.write(hostname + "," + username + "," + pwd);
-                }
+
+            @Override
+            public void onComplete() {
+
             }
-			bw.close();
-		} catch (IOException e) {
-            Log.e(TAG, "export: ", e);
-            Toast.makeText(this, "export failed,"+e.getMessage(), Toast.LENGTH_LONG).show();
-		    return;
-        }
-		Toast.makeText(this, "export succeed,check the dir:\"passkeeperbackup\" on sdcard! ", Toast.LENGTH_LONG).show();
-	}
+        });
+
+    }
 
 	private void generatePwd(UserItem item) {
         String hostname = ((HostItem) item.getParent()).getText();
         String username = item.getText();
         int len = item.getData().pwdLength;
-		String key = app.getKey();
-		String hash = md5(hostname + username + key);
+		String key = PassKeepApp.sInstance.getKey();
+		String hash = Util.md5(hostname + username + key);
 		String pwd = hash.substring(0, len);
 
 		LayoutInflater inflater = LayoutInflater.from(this);
@@ -585,26 +560,6 @@ public class ListActivity extends AppCompatActivity {
 		dialog.show();
 	}
 
-	public static String md5(String string) {
-		byte[] hash;
-		try {
-			hash = MessageDigest.getInstance("MD5").digest(
-					string.getBytes("UTF-8"));
-		} catch (NoSuchAlgorithmException e) {
-			throw new RuntimeException("Huh, MD5 should be supported?", e);
-		} catch (UnsupportedEncodingException e) {
-			throw new RuntimeException("Huh, UTF-8 should be supported?", e);
-		}
-
-		StringBuilder hex = new StringBuilder(hash.length * 2);
-		for (byte b : hash) {
-			if ((b & 0xFF) < 0x10)
-				hex.append("0");
-			hex.append(Integer.toHexString(b & 0xFF));
-		}
-		return hex.toString();
-	}
-
     @SuppressWarnings("MissingPermission")
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -615,7 +570,7 @@ public class ListActivity extends AppCompatActivity {
                     break;
                 case 2:
                     if (restore()){
-                        inflateData();
+                        suscribeData();
                     }
                     break;
                 case 3:

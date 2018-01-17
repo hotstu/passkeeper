@@ -1,11 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+    <data>
+
+        <variable
+            name="item"
+            type="hotstu.github.passkeeper.ListActivity.HostItem" />
+
+        <variable
+            name="adapterCallback"
+            type="hotstu.github.passkeeper.widget.AdapterCallback" />
+
+    </data>
+<LinearLayout
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:background="@color/colorPrimaryDark"
     android:orientation="vertical"
     android:padding="12dp"
+    android:onClick="@{() -> adapterCallback.onClick(item)}"
+    android:onLongClick="@{() -> adapterCallback.onLongClick(item)}"
     android:textSize="17sp">
 
 
@@ -16,6 +30,8 @@
         android:padding="10dp"
         android:textColor="@color/colorText"
         android:textSize="17sp"
+        android:text="@{item.text}"
         tools:text="测试" />
 
 </LinearLayout>
+</layout>

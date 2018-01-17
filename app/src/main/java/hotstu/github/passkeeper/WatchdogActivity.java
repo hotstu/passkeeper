@@ -1,22 +1,20 @@
 package hotstu.github.passkeeper;
 
 
+import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
-import android.content.Intent;
+import android.databinding.DataBindingUtil;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
-import android.util.Log;
-import android.view.View;
-import android.widget.CheckBox;
-import android.widget.EditText;
 
-import com.jakewharton.rxbinding2.view.RxView;
 import com.jakewharton.rxbinding2.widget.RxCompoundButton;
+import com.jakewharton.rxbinding2.widget.RxTextView;
+import com.jakewharton.rxbinding2.widget.TextViewTextChangeEvent;
 
-import hotstu.github.passkeeper.db.AppDatabase;
-import hotstu.github.passkeeper.db.HashEntity;
+import hotstu.github.passkeeper.databinding.PwdformBinding;
 import hotstu.github.passkeeper.viewmodel.WatchDogViewModel;
 import io.reactivex.functions.Consumer;
 
@@ -28,72 +26,48 @@ import io.reactivex.functions.Consumer;
  * @author foo
  */
 public class WatchdogActivity extends AppCompatActivity {
-    private Myapp app;
-    private EditText etPassword;
-    private AppDatabase db;
-    private View btn_ok;
-    private Consumer<Throwable> erroCumsumer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.pwdform);
-        Log.d("WatchdogActivity", "onCreate");
-        WatchDogViewModel viewModel = ViewModelProviders.of(this).get(WatchDogViewModel.class);
-        db = AppDatabase.getInMemoryDatabase(getApplicationContext());
+        final PwdformBinding binding = DataBindingUtil.setContentView(this, R.layout.pwdform);
 
-        etPassword = (EditText) findViewById(R.id.etPassword);
-        btn_ok =  findViewById(R.id.btn_ok);
-        erroCumsumer = new Consumer<Throwable>() {
+        final WatchDogViewModel viewModel = ViewModelProviders.of(this).get(WatchDogViewModel.class);
+
+        Consumer<Throwable> erroCumsumer = new Consumer<Throwable>() {
             @Override
             public void accept(Throwable throwable) throws Exception {
                 throwable.printStackTrace();
             }
         };
-        final CheckBox ckPasswordToggle = (CheckBox) findViewById(R.id.cbShowPwd);
-        RxCompoundButton.checkedChanges(ckPasswordToggle).subscribe(new Consumer<Boolean>() {
+        RxCompoundButton.checkedChanges(binding.cbShowPwd).subscribe(new Consumer<Boolean>() {
             @Override
             public void accept(Boolean aBoolean) throws Exception {
                 if (!aBoolean) {
-                    etPassword.setInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                    etPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                    binding.etPassword.setInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                    binding.etPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
                 } else {
-                    etPassword.setInputType(InputType.TYPE_CLASS_TEXT);
-                    etPassword.setTransformationMethod(null);
+                    binding.etPassword.setInputType(InputType.TYPE_CLASS_TEXT);
+                    binding.etPassword.setTransformationMethod(null);
                 }
             }
         }, erroCumsumer);
-        RxView.clicks(btn_ok).subscribe(new Consumer<Object>() {
+        RxTextView.textChangeEvents(binding.etPassword).subscribe(new Consumer<TextViewTextChangeEvent>() {
             @Override
-            public void accept(Object o) throws Exception {
-                login();
+            public void accept(TextViewTextChangeEvent textViewTextChangeEvent) throws Exception {
+                viewModel.input.setValue(textViewTextChangeEvent.text().toString());
             }
         }, erroCumsumer);
+        binding.setViewModel(viewModel);
+        binding.setActivity(this);
+        viewModel.input.observe(this, new Observer<String>() {
+            @Override
+            public void onChanged(@Nullable String s) {
+                binding.btnOk.setEnabled(s != null && !"".equals(s));
+            }
+        });
     }
 
-    private void login() {
-        final String inputText  = etPassword.getText().toString();
-        if ("".equals(inputText)) {
-            return;
-        }
-        final String hash = db.hashModel().checkHash();
-        final String input = ListActivity.md5(app.getSalt() + inputText);
-        if (hash != null && hash.equals(input)) {
-            app.setKey(etPassword.getText().toString());
-            Intent i = new Intent(getApplicationContext(), ListActivity.class);
-            startActivity(i);
-            finish();
-        } else if (hash == null) {
-            //the first time running this app
-            final String newhash = ListActivity.md5(app.getSalt() + etPassword.getText().toString());
-            db.hashModel().addHash(new HashEntity(newhash));
-            app.setKey(etPassword.getText().toString());
-            Intent i = new Intent(getApplicationContext(), ListActivity.class);
-            startActivity(i);
-            finish();
-        } else {
-            finish();
-        }
-    }
+
 
 }

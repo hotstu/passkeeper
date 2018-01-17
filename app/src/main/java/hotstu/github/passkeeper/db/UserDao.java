@@ -1,5 +1,6 @@
 package hotstu.github.passkeeper.db;
 
+import android.arch.lifecycle.LiveData;
 import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Delete;
 import android.arch.persistence.room.Insert;
@@ -22,7 +23,7 @@ public interface UserDao {
     UserEntity findUserById(long id);
 
     @Query("select * from user where hostId = :id")
-    List<UserEntity> findUsersByHostId(int id);
+    LiveData<List<UserEntity>> findUsersByHostId(int id);
 
     @Delete
     int delUser(UserEntity user);

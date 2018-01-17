@@ -138,6 +138,17 @@ public class TreeAdapter<VH extends RecyclerView.ViewHolder, T extends Node> ext
         }
     }
 
+    public void toggle(Parent item) {
+        int position = mNodeContainer.lookforItem(item);
+        if (item.isOpen()) {
+            //close, et remove children
+            close(item, position);
+        } else {
+            //open, et add children
+            open(item, position);
+        }
+    }
+
     private static final class ParentWapper extends Parent {
         @Override
         public boolean isOpen() {
