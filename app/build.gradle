@@ -3,12 +3,24 @@ android {
     compileSdkVersion 27
     buildToolsVersion "26.0.2"
 
+
+    Properties properties = new Properties()
+    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
     defaultConfig {
         applicationId "hotstu.github.passkeeper"
         minSdkVersion 15
         targetSdkVersion 25
         versionCode 2
         versionName "2.0"
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
+            }
+        }
+        buildConfigField "String", "EMAIL", "\"${properties.getProperty('email')}\""
+        buildConfigField "String", "SALT", "\"${properties.getProperty('salt')}\""
+
     }
     dataBinding {
         enabled = true
@@ -18,7 +30,10 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            // Write out the current schema of Room
         }
+
+
     }
 }
 

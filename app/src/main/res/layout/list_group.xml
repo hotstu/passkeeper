@@ -9,7 +9,6 @@
         <variable
             name="adapterCallback"
             type="hotstu.github.passkeeper.widget.AdapterCallback" />
-
     </data>
 <LinearLayout
     xmlns:tools="http://schemas.android.com/tools"

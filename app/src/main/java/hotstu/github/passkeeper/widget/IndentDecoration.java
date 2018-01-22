@@ -10,6 +10,7 @@ import hotstu.github.passkeeper.tree.NodeVH;
 /**
  * Created by hotstuNg on 2016/8/17.
  */
+@Deprecated
 public class IndentDecoration<VH extends NodeVH> extends RecyclerView.ItemDecoration {
     private int widthPixel  = 0;
 

@@ -9,7 +9,7 @@
     <string name="title_activity_form">pk密码管理器</string>
     <string name="hint_hostname">站点名，例如 mail.163.com</string>
     <string name="hint_username">用户名:</string>
-    <string name="hint_pwdlenth">密码长度(6–12):</string>
+    <string name="hint_pwdlenth">密码长度(6–12):%d</string>
     <string name="show_pwd">显示密码</string>
     <string name="pls_input_host">请输入站点名称</string>
 

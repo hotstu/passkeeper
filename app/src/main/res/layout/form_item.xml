@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="viewModel"
+            type="hotstu.github.passkeeper.viewmodel.ListViewModel" />
+    </data>
+<LinearLayout
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:padding="20dip"
@@ -32,17 +42,19 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
         android:paddingLeft="7.0dip"
-        android:text="@string/hint_pwdlenth"
+        android:text="@{@string/hint_pwdlenth(viewModel.seekbarValue + 6)}"
+        tools:text="@string/hint_pwdlenth"
         android:textColor="#ff3f3f3f"
         android:textSize="16.0dip" />
     
-    <EditText
+    <android.support.v7.widget.AppCompatSeekBar
         android:id="@+id/form_user_et2"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:maxLength="2"
-        android:text="8"
-        android:inputType="number"
+        android:max="6"
+        android:progress="@{viewModel.seekbarValue}"
+        android:onProgressChanged="@{(_, progress, fromuser) -> viewModel.setSeekBarValue(progress)}"
         android:saveEnabled="true" />
 
 </LinearLayout>
+</layout>

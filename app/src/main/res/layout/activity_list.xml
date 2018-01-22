@@ -1,5 +1,8 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
     <data>
+        <variable
+            name="viewModel"
+            type="hotstu.github.passkeeper.viewmodel.ListViewModel" />
     </data>
     <android.support.design.widget.CoordinatorLayout
         android:id="@+id/root"
@@ -20,6 +23,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|right"
             android:layout_margin="@dimen/activity_horizontal_margin"
+            android:onClick="@{() -> viewModel.openAddParent()}"
             android:src="@drawable/ic_toolbar_add" />
 
     </android.support.design.widget.CoordinatorLayout>

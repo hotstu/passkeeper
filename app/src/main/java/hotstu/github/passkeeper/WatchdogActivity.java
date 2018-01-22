@@ -3,6 +3,7 @@ package hotstu.github.passkeeper;
 
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -32,7 +33,7 @@ public class WatchdogActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         final PwdformBinding binding = DataBindingUtil.setContentView(this, R.layout.pwdform);
 
-        final WatchDogViewModel viewModel = ViewModelProviders.of(this).get(WatchDogViewModel.class);
+        final WatchDogViewModel viewModel = ViewModelProviders.of(this, Injection.getViewModelFactory()).get(WatchDogViewModel.class);
 
         Consumer<Throwable> erroCumsumer = new Consumer<Throwable>() {
             @Override
@@ -66,6 +67,19 @@ public class WatchdogActivity extends AppCompatActivity {
                 binding.btnOk.setEnabled(s != null && !"".equals(s));
             }
         });
+        viewModel.loginOkEvent.observe(this, new Observer<String>() {
+            @Override
+            public void onChanged(@Nullable String s) {
+                onLoginOk(s);
+            }
+        });
+    }
+
+    public void onLoginOk(String key) {
+        Intent i = new Intent(this, ListActivity.class);
+        i.putExtra("key", key);
+        startActivity(i);
+        finish();
     }
 
 
