@@ -7,9 +7,6 @@
             name="viewModel"
             type="hotstu.github.passkeeper.viewmodel.WatchDogViewModel" />
 
-        <variable
-            name="activity"
-            type="hotstu.github.passkeeper.WatchdogActivity" />
     </data>
     <LinearLayout
     android:layout_width="300dp"
@@ -50,7 +47,7 @@
             style="@style/Widget.AppCompat.Button.Borderless.Colored"
             android:layout_width="70dp"
             android:layout_height="wrap_content"
-            android:onClick="@{() ->  viewModel.login(activity)}"
+            android:onClick="@{() ->  viewModel.login()}"
             android:text="确定" />
     </LinearLayout>
 </LinearLayout>

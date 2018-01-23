@@ -15,7 +15,7 @@ import com.jakewharton.rxbinding2.widget.RxCompoundButton;
 import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.jakewharton.rxbinding2.widget.TextViewTextChangeEvent;
 
-import hotstu.github.passkeeper.databinding.PwdformBinding;
+import hotstu.github.passkeeper.databinding.ActivityWatchdogBinding;
 import hotstu.github.passkeeper.viewmodel.WatchDogViewModel;
 import io.reactivex.functions.Consumer;
 
@@ -31,7 +31,7 @@ public class WatchdogActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        final PwdformBinding binding = DataBindingUtil.setContentView(this, R.layout.pwdform);
+        final ActivityWatchdogBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_watchdog);
 
         final WatchDogViewModel viewModel = ViewModelProviders.of(this, Injection.getViewModelFactory()).get(WatchDogViewModel.class);
 
@@ -60,7 +60,6 @@ public class WatchdogActivity extends AppCompatActivity {
             }
         }, erroCumsumer);
         binding.setViewModel(viewModel);
-        binding.setActivity(this);
         viewModel.input.observe(this, new Observer<String>() {
             @Override
             public void onChanged(@Nullable String s) {

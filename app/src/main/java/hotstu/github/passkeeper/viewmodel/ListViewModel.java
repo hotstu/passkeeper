@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import hotstu.github.passkeeper.vo.HostItem;
 import hotstu.github.passkeeper.Injection;
-import hotstu.github.passkeeper.ListActivity;
+import hotstu.github.passkeeper.vo.Item;
+import hotstu.github.passkeeper.vo.UserItem;
 import hotstu.github.passkeeper.Util;
 import hotstu.github.passkeeper.db.AppDatabase;
 import hotstu.github.passkeeper.db.HostEntity;
@@ -44,11 +46,11 @@ public class ListViewModel extends AndroidViewModel {
 
     final AppDatabase database;
     final String key;
-    final List<ListActivity.Item> items;
-    final LiveData<List<ListActivity.Item>> liveData;
+    final List<Item> items;
+    final LiveData<List<Item>> liveData;
     public final SingleLiveEvent<Void> addParentEvent;
-    public final SingleLiveEvent<ListActivity.Item> addChildEvent;
-    public final SingleLiveEvent<ListActivity.Item> deleteEvent;
+    public final SingleLiveEvent<Item> addChildEvent;
+    public final SingleLiveEvent<Item> deleteEvent;
     public final SingleLiveEvent<String> errToastEvent;
     public final SingleLiveEvent<String> nomalToastEvent;
     public final SingleLiveEvent<String> showPwdEvent;
@@ -74,14 +76,14 @@ public class ListViewModel extends AndroidViewModel {
         recreateEvent = new SingleLiveEvent<>();
         seekbarValue.set(0);
         liveData = Transformations.switchMap(database.HostModel().queryAllHosts(),
-                new Function<List<HostEntity>, LiveData<List<ListActivity.Item>>>() {
+                new Function<List<HostEntity>, LiveData<List<Item>>>() {
             @Override
-            public LiveData<List<ListActivity.Item>> apply(List<HostEntity> input) {
-                final MediatorLiveData<List<ListActivity.Item>> mediatorLiveData = new MediatorLiveData<>();
+            public LiveData<List<Item>> apply(List<HostEntity> input) {
+                final MediatorLiveData<List<Item>> mediatorLiveData = new MediatorLiveData<>();
                 items.clear();
                 for (int i = 0; i < input.size(); i++) {
                     HostEntity hostEntity = input.get(i);
-                    final ListActivity.HostItem itemhost = new ListActivity.HostItem();
+                    final HostItem itemhost = new HostItem();
                     itemhost.setData(hostEntity);
                     items.add(itemhost);
                     LiveData<List<UserEntity>> tempusers = database.UserModel().findUsersByHostId(hostEntity.id);
@@ -89,9 +91,9 @@ public class ListViewModel extends AndroidViewModel {
                         @Override
                         public void onChanged(@Nullable List<UserEntity> userEntities) {
                             Log.d(TAG, "userEntities onChanged");
-                            ArrayList<ListActivity.UserItem> useritems = new ArrayList<>();
+                            ArrayList<UserItem> useritems = new ArrayList<>();
                             for (int j = 0; j < userEntities.size(); j++) {
-                                ListActivity.UserItem userItem = new ListActivity.UserItem();
+                                UserItem userItem = new UserItem();
                                 userItem.setData(userEntities.get(j));
                                 useritems.add(userItem);
                             }
@@ -111,16 +113,16 @@ public class ListViewModel extends AndroidViewModel {
         addParentEvent.call();
     }
 
-    public void openAddChild(ListActivity.Item current) {
+    public void openAddChild(Item current) {
         addChildEvent.postValue(current);
     }
 
-    public void showDeleteDialog(ListActivity.Item item) {
+    public void showDeleteDialog(Item item) {
         deleteEvent.postValue(item);
     }
 
-    public void performDeleteAction(ListActivity.Item item) {
-        if (item instanceof ListActivity.UserItem) {
+    public void performDeleteAction(Item item) {
+        if (item instanceof UserItem) {
             int count = Injection.getDataBase().UserModel().delUser((UserEntity) item.getData());
             showToastSuccess( count + " row(s) deleted");
         }
@@ -157,8 +159,8 @@ public class ListViewModel extends AndroidViewModel {
     }
 
 
-    public void generatePwd(ListActivity.UserItem child) {
-        String hostname = ((ListActivity.HostItem) child.getParent()).getText();
+    public void generatePwd(UserItem child) {
+        String hostname = ((HostItem) child.getParent()).getText();
         String username = child.getText();
         int len = child.getData().pwdLength;
         String hash = Util.md5(hostname + username + this.key);
@@ -174,27 +176,27 @@ public class ListViewModel extends AndroidViewModel {
         nomalToastEvent.postValue(msg);
     }
 
-    public LiveData<List<ListActivity.Item>> getItems() {
+    public LiveData<List<Item>> getItems() {
         return liveData;
     }
 
     public void export() {
         io.reactivex.Observable.just(getItems().getValue())
-                .map(new io.reactivex.functions.Function<List<ListActivity.Item>, Boolean>() {
+                .map(new io.reactivex.functions.Function<List<Item>, Boolean>() {
                     @Override
-                    public Boolean apply(List<ListActivity.Item> items) throws Exception {
+                    public Boolean apply(List<Item> items) throws Exception {
                         File b = new File(Environment.getExternalStorageDirectory(), "passkeeperbackup");
                         File csv = new File(b, "/export"+System.currentTimeMillis()+".csv");
                         csv.getParentFile().mkdirs();
                         BufferedWriter bw = null;
                         try {
                             bw = new BufferedWriter(new FileWriter(csv, false));
-                            for (ListActivity.Item tmp : items) {
-                                ListActivity.HostItem host = ((ListActivity.HostItem) tmp);
+                            for (Item tmp : items) {
+                                HostItem host = ((HostItem) tmp);
                                 String hostname = host.getText();
                                 LinkedList<Node> tmpusers = host.getChildren();
                                 for (Node tmpu : tmpusers) {
-                                    ListActivity.UserItem user = ((ListActivity.UserItem) tmpu);
+                                    UserItem user = (UserItem) tmpu;
                                     UserEntity userEntity = user.getData();
                                     if (userEntity.id <= 0) continue;
                                     String username = userEntity.username;

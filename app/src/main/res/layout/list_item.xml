@@ -6,7 +6,7 @@
 
         <variable
             name="item"
-            type="hotstu.github.passkeeper.ListActivity.UserItem" />
+            type="hotstu.github.passkeeper.vo.UserItem" />
 
         <variable
             name="adapterCallback"

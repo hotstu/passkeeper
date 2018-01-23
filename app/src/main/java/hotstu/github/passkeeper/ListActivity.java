@@ -38,12 +38,13 @@ import java.util.List;
 
 import hotstu.github.passkeeper.databinding.ActivityListBinding;
 import hotstu.github.passkeeper.databinding.FormItemBinding;
-import hotstu.github.passkeeper.db.HostEntity;
 import hotstu.github.passkeeper.db.UserEntity;
-import hotstu.github.passkeeper.tree.Child;
 import hotstu.github.passkeeper.tree.Node;
 import hotstu.github.passkeeper.tree.Parent;
 import hotstu.github.passkeeper.viewmodel.ListViewModel;
+import hotstu.github.passkeeper.vo.HostItem;
+import hotstu.github.passkeeper.vo.Item;
+import hotstu.github.passkeeper.vo.UserItem;
 import hotstu.github.passkeeper.widget.AdapterCallback;
 import hotstu.github.passkeeper.widget.TreeAdapter;
 
@@ -124,11 +125,12 @@ public class ListActivity extends AppCompatActivity {
             }
         });
 
-        viewModel.addParentEvent.observe(this, new Observer<Item>() {
+        viewModel.addParentEvent.observe(this, new Observer<Void>() {
             @Override
-            public void onChanged(@Nullable Item item) {
+            public void onChanged(@Nullable Void aVoid) {
                 showAddParent();
             }
+
         });
 
         viewModel.addChildEvent.observe(this, new Observer<Item>() {
@@ -165,67 +167,15 @@ public class ListActivity extends AppCompatActivity {
             }
         });
 
-        viewModel.recreateEvent.observe(this, new Observer<Object>() {
+        viewModel.recreateEvent.observe(this, new Observer<Void>() {
             @Override
-            public void onChanged(@Nullable Object o) {
+            public void onChanged(@Nullable Void aVoid) {
                 recreate();
             }
+
         });
     }
 
-
-    public interface Item<T> extends Node {
-        void setData(T data);
-        T getData();
-        String getText();
-    }
-
-    public static class HostItem extends Parent implements Item<HostEntity> {
-        private HostEntity data;
-
-        public HostItem() {
-        }
-        public HostItem(HostEntity data) {
-            this.data = data;
-        }
-        @Override
-        public void setData(HostEntity data) {
-            this.data = data;
-        }
-
-        @Override
-        public HostEntity getData() {
-            return data;
-        }
-
-        @Override
-        public String getText() {
-            return data.hostname;
-        }
-    }
-
-    public static class UserItem extends Child implements Item<UserEntity> {
-        private UserEntity data;
-        public UserItem() {
-        }
-        public UserItem(UserEntity data) {
-            this.data = data;
-        }
-        @Override
-        public void setData(UserEntity data) {
-            this.data = data;
-        }
-
-        @Override
-        public UserEntity getData() {
-            return data;
-        }
-
-        @Override
-        public String getText() {
-            return data.username;
-        }
-    }
 
     AdapterCallback adapterCallback = new AdapterCallback() {
 

@@ -4,7 +4,7 @@
 
         <variable
             name="item"
-            type="hotstu.github.passkeeper.ListActivity.HostItem" />
+            type="hotstu.github.passkeeper.vo.HostItem" />
 
         <variable
             name="adapterCallback"
