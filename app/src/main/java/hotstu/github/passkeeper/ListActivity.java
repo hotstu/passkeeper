@@ -1,21 +1,13 @@
 package hotstu.github.passkeeper;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
-import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.databinding.DataBindingUtil;
 import android.databinding.ViewDataBinding;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresPermission;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
@@ -33,8 +25,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.tbruyelle.rxpermissions2.RxPermissions;
+
 import java.io.File;
-import java.util.List;
 
 import hotstu.github.passkeeper.databinding.ActivityListBinding;
 import hotstu.github.passkeeper.databinding.FormItemBinding;
@@ -47,6 +40,7 @@ import hotstu.github.passkeeper.vo.Item;
 import hotstu.github.passkeeper.vo.UserItem;
 import hotstu.github.passkeeper.widget.AdapterCallback;
 import hotstu.github.passkeeper.widget.TreeAdapter;
+import io.reactivex.Observable;
 
 public class ListActivity extends AppCompatActivity {
     private static final String TAG = "ListActivity";
@@ -54,13 +48,16 @@ public class ListActivity extends AppCompatActivity {
     TreeAdapter<VH, Item> mAdapter;
     private ActivityListBinding binding;
     private ListViewModel viewModel;
+    private RxPermissions rxPermissions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        rxPermissions = new RxPermissions(this);
+        rxPermissions.setLogging(true);
         binding = DataBindingUtil.setContentView(this, R.layout.activity_list);
         viewModel = ViewModelProviders.of(this, Injection.getViewModelFactory(this)).get(ListViewModel.class);
-        binding.setVariable(BR.viewModel, viewModel);
+        binding.setViewModel(viewModel);
         binding.list.setLayoutManager(new LinearLayoutManager(this) {
             @Override
             public boolean supportsPredictiveItemAnimations() {
@@ -101,79 +98,40 @@ public class ListActivity extends AppCompatActivity {
 
     void suscribeData() {
 
-        viewModel.getItems().observe(this, new Observer<List<Item>>() {
-            @Override
-            public void onChanged(@Nullable List<Item> items) {
-                mAdapter.clearDataSet();
-                for (int i = 0; i < items.size(); i++) {
-                    Item item = items.get(i);
-                    if (item instanceof HostItem) {
+        viewModel.getItems().observe(this, items -> {
+            mAdapter.clearDataSet();
+            for (int i = 0; i < items.size(); i++) {
+                Item item = items.get(i);
+                if (item instanceof HostItem) {
 
-                        HostItem host = (HostItem) item;
-                        if(host.getChildCount() == 0 ){
+                    HostItem host = (HostItem) item;
+                    if(host.getChildCount() == 0 ){
+                        host.addChild(new UserItem(new UserEntity(0, "+", 0, 0)), 0);
+                    } else {
+                        UserItem user = (UserItem) host.findItem(1);
+                        if (user.getData().id != 0) {
                             host.addChild(new UserItem(new UserEntity(0, "+", 0, 0)), 0);
-                        } else {
-                            UserItem user = (UserItem) host.findItem(1);
-                            if (user.getData().id != 0) {
-                                host.addChild(new UserItem(new UserEntity(0, "+", 0, 0)), 0);
-                            }
-
                         }
+
                     }
                 }
-                mAdapter.setDataSet(items);
             }
+            mAdapter.setDataSet(items);
         });
 
-        viewModel.addParentEvent.observe(this, new Observer<Void>() {
-            @Override
-            public void onChanged(@Nullable Void aVoid) {
-                showAddParent();
-            }
+        viewModel.addParentEvent.observe(this, aVoid -> showAddParent());
 
-        });
+        viewModel.addChildEvent.observe(this, item -> showAddUser((UserItem) item));
 
-        viewModel.addChildEvent.observe(this, new Observer<Item>() {
-            @Override
-            public void onChanged(@Nullable Item item) {
-                showAddUser((UserItem) item);
-            }
-        });
+        viewModel.errToastEvent.observe(this, s -> Toast.makeText(ListActivity.this, s, Toast.LENGTH_LONG).show());
 
-        viewModel.errToastEvent.observe(this, new Observer<String>() {
-            @Override
-            public void onChanged(@Nullable String s) {
-                Toast.makeText(ListActivity.this, s, Toast.LENGTH_LONG).show();
-            }
-        });
-        viewModel.nomalToastEvent.observe(this, new Observer<String>() {
-            @Override
-            public void onChanged(@Nullable String s) {
-                Toast.makeText(ListActivity.this, s, Toast.LENGTH_SHORT).show();
-            }
-        });
+        viewModel.nomalToastEvent.observe(this, s -> Toast.makeText(ListActivity.this, s, Toast.LENGTH_SHORT).show());
 
-        viewModel.deleteEvent.observe(this, new Observer<Item>() {
-            @Override
-            public void onChanged(@Nullable Item item) {
-                showDeleteDialog(item);
-            }
-        });
+        viewModel.deleteEvent.observe(this, this::showDeleteDialog);
 
-        viewModel.showPwdEvent.observe(this, new Observer<String>() {
-            @Override
-            public void onChanged(@Nullable String s) {
-                generatePwd(s);
-            }
-        });
+        viewModel.showPwdEvent.observe(this, this::generatePwd);
 
-        viewModel.recreateEvent.observe(this, new Observer<Void>() {
-            @Override
-            public void onChanged(@Nullable Void aVoid) {
-                recreate();
-            }
-
-        });
+        viewModel.recreateEvent.observe(this, aVoid -> recreate());
     }
 
 
@@ -204,12 +162,12 @@ public class ListActivity extends AppCompatActivity {
     class VH extends RecyclerView.ViewHolder {
 
         final ViewDataBinding binding;
-        public VH(View itemView, ViewDataBinding binding) {
+        VH(View itemView, ViewDataBinding binding) {
             super(itemView);
             this.binding = binding;
         }
 
-        public void bindData(Item item) {
+        void bindData(Item item) {
             binding.setVariable(BR.item, item);
             binding.setVariable(BR.adapterCallback, adapterCallback);
             binding.executePendingBindings();
@@ -225,22 +183,9 @@ public class ListActivity extends AppCompatActivity {
         alertDialogBuilder
                 .setCancelable(false)
                 .setPositiveButton("OK",
-                        new DialogInterface.OnClickListener() {
-
-                            @Override
-                            public void onClick(DialogInterface dialog,
-                                                int which) {
-                                viewModel.addHost(et.getText().toString());
-                            }
-
-                        })
+                        (dialog, which) -> viewModel.addHost(et.getText().toString()))
                 .setNegativeButton("Cancel",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                dialog.cancel();
-                            }
-                        });
+                        (dialog, which) -> dialog.cancel());
         AlertDialog diaolog = alertDialogBuilder.create();
         diaolog.show();
     }
@@ -253,24 +198,13 @@ public class ListActivity extends AppCompatActivity {
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ListActivity.this);
         alertDialogBuilder.setView(dialogBinding.getRoot());
         alertDialogBuilder.setPositiveButton("OK",
-                new DialogInterface.OnClickListener() {
-
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        final HostItem host = ((HostItem) child.getParent());
-                        final String  username = dialogBinding.formUserEt.getText().toString();
-                        final int   pwdlenth = viewModel.seekbarValue.get() + 6;
-                        viewModel.addUser(username, pwdlenth, host.getData().id);
-                    }
-
+                (dialog, which) -> {
+                    final HostItem host = ((HostItem) child.getParent());
+                    final String  username = dialogBinding.formUserEt.getText().toString();
+                    final int   pwdlenth = viewModel.seekbarValue.get() + 6;
+                    viewModel.addUser(username, pwdlenth, host.getData().id);
                 }).setNegativeButton("Cancel",
-                new DialogInterface.OnClickListener() {
-
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
-                    }
-                });
+                (dialog, which) -> dialog.cancel());
         AlertDialog dialog = alertDialogBuilder.create();
         dialog.show();
     }
@@ -281,12 +215,7 @@ public class ListActivity extends AppCompatActivity {
                     .setTitle("Warning")
                     .setMessage("do you want delete: " + item.getText())
                     .setPositiveButton("Yes",
-                            new DialogInterface.OnClickListener() {
-
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    viewModel.performDeleteAction(item);
-                            }})
+                            (dialog, which) -> viewModel.performDeleteAction(item))
                     .setNegativeButton("No", null).show();
         return true;
 
@@ -295,7 +224,7 @@ public class ListActivity extends AppCompatActivity {
     private void generatePwd(String pwdStr) {
         LayoutInflater inflater = LayoutInflater.from(this);
         View promptView = inflater.inflate(R.layout.puretext_dialog, null);
-        final TextView tv1 = (TextView) promptView.findViewById(R.id.pwd_tv);
+        final TextView tv1 =  promptView.findViewById(R.id.pwd_tv);
         tv1.setText(pwdStr);
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
         alertDialogBuilder.setView(promptView);
@@ -316,36 +245,26 @@ public class ListActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (R.id.backup == item.getItemId()) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-                return true;
-            }
-            backup();
-            return true;
-		}
-		if (R.id.restore == item.getItemId()) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 2);
-                return true;
-            }
-			restore();
-			return true;
-		}
-		if(R.id.export == item.getItemId()){
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 3);
-                return true;
-            }
-			export();
-			return true;
-		}
-        return super.onOptionsItemSelected(item);
+    public boolean onOptionsItemSelected(final MenuItem item) {
+        rxPermissions.request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                .filter(aBoolean -> aBoolean)
+                .flatMap(aBoolean -> Observable.just(item.getItemId()))
+                .subscribe(id -> {
+                    if ( R.id.backup == id) {
+                        backup();
+                    }
+                    if ( R.id.restore == id) {
+                        viewModel.restore();
+                    }
+                    if ( R.id.export == id) {
+                        viewModel.export();
+                    }
+                }, Throwable::printStackTrace);
+
+        return true;
 	}
 
 
-	@RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 	private void backup() {
 		String src = getDatabasePath("passkeeper.db").getAbsolutePath();
         Intent intent = new Intent();
@@ -369,37 +288,6 @@ public class ListActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("MissingPermission")
-    @RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-    private void restore() {
-        // FIXME 兼容老的数据库
-        viewModel.restore();
-	}
 
-    @SuppressLint("MissingPermission")
-    @RequiresPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-	private void export(){
-        viewModel.export();
-    }
 
-    @SuppressWarnings("MissingPermission")
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            switch (requestCode) {
-                case 1:
-                    backup();
-                    break;
-                case 2:
-                    restore();
-                    break;
-                case 3:
-                    export();
-                    break;
-                default:
-                    break;
-            }
-        }
-
-    }
 }
