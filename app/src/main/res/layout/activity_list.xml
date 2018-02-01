@@ -23,6 +23,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|right"
             android:layout_margin="@dimen/activity_horizontal_margin"
+            android:foreground="?attr/selectableItemBackground"
             android:onClick="@{() -> viewModel.openAddParent()}"
             android:src="@drawable/ic_toolbar_add" />
 

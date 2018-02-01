@@ -31,4 +31,22 @@ public class HostItem extends Parent implements Item<HostEntity> {
     public String getText() {
         return data.hostname;
     }
+
+    @Override
+    public int getId() {
+        return data.id;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof HostItem)) {
+            return false;
+        }
+        return this.getId() == ((HostItem) obj).getId();
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * this.getId();
+    }
 }

@@ -1,40 +1,39 @@
 package hotstu.github.passkeeper.viewmodel;
 
 import android.app.Application;
-import android.arch.core.util.Function;
 import android.arch.lifecycle.AndroidViewModel;
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MediatorLiveData;
-import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.Transformations;
 import android.databinding.ObservableField;
 import android.os.Environment;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import android.support.v4.util.Pair;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseArray;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashSet;
 import java.util.List;
 
-import hotstu.github.passkeeper.vo.HostItem;
 import hotstu.github.passkeeper.Injection;
-import hotstu.github.passkeeper.vo.Item;
-import hotstu.github.passkeeper.vo.UserItem;
 import hotstu.github.passkeeper.Util;
 import hotstu.github.passkeeper.db.AppDatabase;
 import hotstu.github.passkeeper.db.HostEntity;
 import hotstu.github.passkeeper.db.UserEntity;
-import hotstu.github.passkeeper.tree.Node;
+import hotstu.github.passkeeper.vo.HostItem;
+import hotstu.github.passkeeper.vo.Item;
+import hotstu.github.passkeeper.vo.UserItem;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.observers.DisposableObserver;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * @author hglf
@@ -46,8 +45,7 @@ public class ListViewModel extends AndroidViewModel {
 
     final AppDatabase database;
     final String key;
-    final List<Item> items;
-    final LiveData<List<Item>> liveData;
+    final LiveData<SparseArray<Pair<HostEntity, SparseArray<UserEntity>>>> liveData;
     public final SingleLiveEvent<Void> addParentEvent;
     public final SingleLiveEvent<Item> addChildEvent;
     public final SingleLiveEvent<Item> deleteEvent;
@@ -65,7 +63,6 @@ public class ListViewModel extends AndroidViewModel {
         super(application);
         this.database = db;
         this.key = key;
-        items = new ArrayList<>();
         seekbarValue = new ObservableField<>();
         addParentEvent = new SingleLiveEvent<>();
         errToastEvent = new SingleLiveEvent<>();
@@ -75,38 +72,69 @@ public class ListViewModel extends AndroidViewModel {
         showPwdEvent = new SingleLiveEvent<>();
         recreateEvent = new SingleLiveEvent<>();
         seekbarValue.set(0);
+        final MediatorLiveData<SparseArray<Pair<HostEntity, SparseArray<UserEntity>>>> mediatorLiveData = new MediatorLiveData<>();
+        final SparseArray<Pair<HostEntity, SparseArray<UserEntity>>> items = new SparseArray<>();
+        final SparseArray<LiveData<List<UserEntity>>> activeSources = new SparseArray<>();
         liveData = Transformations.switchMap(database.HostModel().queryAllHosts(),
-                new Function<List<HostEntity>, LiveData<List<Item>>>() {
-            @Override
-            public LiveData<List<Item>> apply(List<HostEntity> input) {
-                final MediatorLiveData<List<Item>> mediatorLiveData = new MediatorLiveData<>();
-                items.clear();
-                for (int i = 0; i < input.size(); i++) {
-                    HostEntity hostEntity = input.get(i);
-                    final HostItem itemhost = new HostItem();
-                    itemhost.setData(hostEntity);
-                    items.add(itemhost);
-                    LiveData<List<UserEntity>> tempusers = database.UserModel().findUsersByHostId(hostEntity.id);
-                    mediatorLiveData.addSource(tempusers, new Observer<List<UserEntity>>() {
-                        @Override
-                        public void onChanged(@Nullable List<UserEntity> userEntities) {
-                            Log.d(TAG, "userEntities onChanged");
-                            ArrayList<UserItem> useritems = new ArrayList<>();
-                            for (int j = 0; j < userEntities.size(); j++) {
-                                UserItem userItem = new UserItem();
-                                userItem.setData(userEntities.get(j));
-                                useritems.add(userItem);
-                            }
-                            itemhost.clear();
-                            itemhost.addChildren(useritems);
-                            mediatorLiveData.postValue(items);
+                input -> {
+                    HashSet<Integer> activeHostIdSet = new HashSet<>();
+                    for (int i = 0; i < input.size(); i++) {
+                        HostEntity host = input.get(i);
+                        Pair<HostEntity, SparseArray<UserEntity>> old = items.get(host.id);
+                        items.put(host.id, old == null ? new Pair<>(host, new SparseArray<>()) : old);
+
+                        final int hostId = host.id;
+                        activeHostIdSet.add(hostId);
+                        if (activeSources.get(hostId) == null) {
+                            activeSources.put(hostId, database.UserModel().findUsersByHostId(hostId));
+                            mediatorLiveData.addSource(activeSources.get(hostId),
+                                    userEntities -> {
+                                        HashSet<Integer> activeUserIds = new HashSet<>();
+                                        Pair<HostEntity, SparseArray<UserEntity>> hostItemSparseArrayPair = items.get(hostId);
+                                        if (hostItemSparseArrayPair == null) {
+                                            //removed stop watch
+                                            Log.w(TAG, "user with illegal hostId, ignore");
+                                            return;
+                                        }
+                                        for (int j = 0; j < userEntities.size(); j++) {
+                                            UserEntity userEntity = userEntities.get(j);
+                                            activeUserIds.add(userEntity.id);
+                                            hostItemSparseArrayPair.second.put(userEntity.id, userEntity);
+                                        }
+                                        HashSet<Integer> toRemove = new HashSet<>();
+                                        for (int k = 0; k < hostItemSparseArrayPair.second.size(); k++) {
+                                            UserEntity user = hostItemSparseArrayPair.second.get(hostItemSparseArrayPair.second.keyAt(k));
+                                            if (!activeUserIds.contains(user.id)) {
+                                                toRemove.add(hostItemSparseArrayPair.second.keyAt(k));
+                                            }
+                                        }
+                                        for (Integer integer : toRemove) {
+                                            hostItemSparseArrayPair.second.remove(integer);
+                                        }
+                                        mediatorLiveData.postValue(items);
+                                    });
                         }
-                    });
-                }
-                mediatorLiveData.postValue(items);
-                return mediatorLiveData;
-            }
-        });
+
+                    }
+                    // remove inactive hostId, et.  deleted
+                    HashSet<Integer> deleteHostIdset = new HashSet<>();
+                    for (int i = 0; i < items.size(); i++) {
+                        Pair<HostEntity, SparseArray<UserEntity>> hostEntitySparseArrayPair = items.get(items.keyAt(i));
+                        if (!activeHostIdSet.contains(hostEntitySparseArrayPair.first.id)) {
+                            deleteHostIdset.add(items.keyAt(i));
+                        }
+                    }
+                    for (Integer integer : deleteHostIdset) {
+                        int id = items.get(integer).first.id;
+                        items.remove(integer);
+                        if (activeSources.get(id) != null) {
+                            mediatorLiveData.removeSource(activeSources.get(id));
+                            activeSources.remove(id);
+                        }
+                    }
+                    mediatorLiveData.postValue(items);
+                    return mediatorLiveData;
+                });
     }
 
     public void openAddParent() {
@@ -124,11 +152,10 @@ public class ListViewModel extends AndroidViewModel {
     public void performDeleteAction(Item item) {
         if (item instanceof UserItem) {
             int count = Injection.getDataBase().UserModel().delUser((UserEntity) item.getData());
-            showToastSuccess( count + " row(s) deleted");
-        }
-        else {
+            showToastSuccess(count + " row(s) deleted");
+        } else {
             HostEntity data = (HostEntity) item.getData();
-            int count =  Injection.getDataBase().HostModel().delHost(data);
+            int count = Injection.getDataBase().HostModel().delHost(data);
             showToastSuccess(count + " row(s) deleted");
         }
     }
@@ -138,10 +165,10 @@ public class ListViewModel extends AndroidViewModel {
             showToastErr("host name 不能为空");
             return;
         }
-        if ( (Injection.getDataBase().HostModel().addHost(new HostEntity(0, hostname))) > 0) {
+        if ((Injection.getDataBase().HostModel().addHost(new HostEntity(0, hostname))) > 0) {
             showToastSuccess("成功");
         } else {
-           showToastErr("失败");
+            showToastErr("失败");
         }
     }
 
@@ -176,42 +203,41 @@ public class ListViewModel extends AndroidViewModel {
         nomalToastEvent.postValue(msg);
     }
 
-    public LiveData<List<Item>> getItems() {
+    public LiveData<SparseArray<Pair<HostEntity, SparseArray<UserEntity>>>> getItems() {
         return liveData;
     }
 
     public void export() {
-        io.reactivex.Observable.just(getItems().getValue())
-                .map(new io.reactivex.functions.Function<List<Item>, Boolean>() {
-                    @Override
-                    public Boolean apply(List<Item> items) throws Exception {
-                        File b = new File(Environment.getExternalStorageDirectory(), "passkeeperbackup");
-                        File csv = new File(b, "/export"+System.currentTimeMillis()+".csv");
-                        csv.getParentFile().mkdirs();
-                        BufferedWriter bw = null;
-                        try {
-                            bw = new BufferedWriter(new FileWriter(csv, false));
-                            for (Item tmp : items) {
-                                HostItem host = ((HostItem) tmp);
-                                String hostname = host.getText();
-                                LinkedList<Node> tmpusers = host.getChildren();
-                                for (Node tmpu : tmpusers) {
-                                    UserItem user = (UserItem) tmpu;
-                                    UserEntity userEntity = user.getData();
-                                    if (userEntity.id <= 0) continue;
-                                    String username = userEntity.username;
-                                    String hash = Util.md5(hostname + username + key);
-                                    String pwd = hash.substring(0, userEntity.pwdLength);
-                                    bw.newLine();
-                                    bw.write(hostname + "," + username + "," + pwd);
-                                }
+        //cold observable
+        Observable.just(getItems().getValue())
+                .map(items -> {
+                    File b = new File(Environment.getExternalStorageDirectory(), "passkeeperbackup");
+                    File csv = new File(b, "/export" + System.currentTimeMillis() + ".csv");
+                    csv.getParentFile().mkdirs();
+                    BufferedWriter bw = null;
+                    try {
+                        bw = new BufferedWriter(new FileWriter(csv, false));
+                        for (int i = 0; i < items.size(); i++) {
+                            int key = items.keyAt(i);
+                            Pair<HostEntity, SparseArray<UserEntity>> hostEntitySparseArrayPair = items.get(key);
+                            HostEntity host = hostEntitySparseArrayPair.first;
+                            String hostname = host.hostname;
+                            SparseArray<UserEntity> tmpusers = hostEntitySparseArrayPair.second;
+                            for (int j = 0; j < tmpusers.size(); j++) {
+                                int key2 = tmpusers.keyAt(j);
+                                UserEntity user = tmpusers.get(key2);
+                                if (user.id <= 0) continue;
+                                String username = user.username;
+                                String hash = Util.md5(hostname + username + key);
+                                String pwd = hash.substring(0, user.pwdLength);
+                                bw.newLine();
+                                bw.write(hostname + "," + username + "," + pwd);
                             }
-                            return true;
                         }
-                        finally {
-                            if (bw != null) {
-                                bw.close();
-                            }
+                        return true;
+                    } finally {
+                        if (bw != null) {
+                            bw.close();
                         }
                     }
                 })
@@ -223,7 +249,7 @@ public class ListViewModel extends AndroidViewModel {
 
                     @Override
                     public void onError(Throwable e) {
-                        showToastErr("出错：" + e.getMessage() );
+                        showToastErr("出错：" + e.getMessage());
                     }
 
                     @Override
@@ -234,69 +260,101 @@ public class ListViewModel extends AndroidViewModel {
     }
 
     public void restore() {
-        File dir = new File(Environment.getExternalStorageDirectory(), "passkeeperbackup");
-        if (!dir.exists()) {
-            showToastErr("backup dir not exists!");
-            return;
-        }
-        File[] backups = dir.listFiles();
-        if (backups == null) {
-            showToastErr( "无法访问sd卡");
-            return;
-        }
-        long tem = 0;
-        File lastbackup = null;
-        for (File b : backups) {
-            if (b.getName().startsWith("db")&&b.lastModified() > tem) {
-                tem = b.lastModified();
-                lastbackup = b;
-            }
-        }
-        if (lastbackup == null) {
-            showToastErr("backup file not exists!");
-            return;
-        }
+        Observable.just(new File(Environment.getExternalStorageDirectory(), "passkeeperbackup"))
+                .map(file -> {
+                    return file.listFiles();
+                })
+                .onErrorResumeNext((Throwable throwable) -> {
+                    throwable.printStackTrace();
+                    Log.e(TAG, Thread.currentThread().getName());
+                    showToastErr("TEST");
+                    return Observable.empty();
+                })
+                .map(files -> {
+                    long tem = 0;
+                    File lastbackup = null;
+                    for (File b : files) {
+                        if (b.getName().startsWith("db") && b.lastModified() > tem) {
+                            tem = b.lastModified();
+                            lastbackup = b;
+                        }
+                    }
+                    return lastbackup;
+                })
+                .onErrorResumeNext(throwable -> {
+                    showToastErr("无法找到备份文件");
+                })
+                .map(file -> {
+                            String dst = Injection.getApplicaitonContext().getDatabasePath("passkeeper.db").getAbsolutePath();
+                            FileInputStream finput = null;
+                            OutputStream foutput = null;
+                            try {
+                                finput = new FileInputStream(file);
+                                foutput = new FileOutputStream(dst);
 
-        String dst = Injection.getApplicaitonContext().getDatabasePath("passkeeper.db").getAbsolutePath();
-        FileInputStream finput = null;
-        OutputStream foutput = null;
-        try {
-            finput = new FileInputStream(lastbackup);
-            foutput = new FileOutputStream(dst);
+                                // Transfer bytes from the inputfile to the outputfile
+                                byte[] buffer = new byte[1024];
+                                int length;
+                                while ((length = finput.read(buffer)) > 0) {
+                                    foutput.write(buffer, 0, length);
+                                }
+                                foutput.flush();
+                            } finally {
+                                if (finput != null) {
+                                    finput.close();
+                                }
+                                if (foutput != null) {
+                                    foutput.close();
+                                }
+                            }
+                            return true;
+                        }
+                )
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(r -> {
+                            recreate();
+                            showToastSuccess("restore succeed!");
+                        },
+                        throwable -> {
+                            showToastErr("出错：" + throwable.getMessage());
+                        }
+                );
 
-            // Transfer bytes from the inputfile to the outputfile
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = finput.read(buffer)) > 0) {
-                foutput.write(buffer, 0, length);
-            }
-            foutput.flush();
-            recreate();//重启activity
-        } catch (Exception e) {
-            showToastErr("failed"+e.getMessage());
-            return;
-        } finally {
-            // Close the streams
-            if (foutput != null) {
-                try {
-                    foutput.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (finput != null) {
-                try {
-                    finput.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }
-        showToastSuccess( "restore succeed!");
     }
+
+
+    public final ItemProvider itemProvider = new ItemProvider() {
+        SparseArray<HostItem> hostSet = new SparseArray<>();
+        SparseArray<SparseArray<UserItem>> userSet = new SparseArray<>();
+
+        @Override
+        public HostItem obtainHost(int id) {
+            if (hostSet.get(id) == null) {
+                hostSet.put(id, new HostItem());
+            }
+            return hostSet.get(id);
+        }
+
+        @Override
+        public UserItem obtainUser(int id, int hostId) {
+            if (userSet.get(hostId) == null) {
+                userSet.put(hostId, new SparseArray<>());
+            }
+            if (userSet.get(hostId).get(id) == null) {
+                userSet.get(hostId).put(id, new UserItem());
+            }
+            return userSet.get(hostId).get(id);
+        }
+    };
 
     private void recreate() {
         recreateEvent.call();
+    }
+
+    public interface ItemProvider {
+        HostItem obtainHost(int id);
+
+        UserItem obtainUser(int id, int hostId);
     }
 }

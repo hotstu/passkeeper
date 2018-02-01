@@ -26,10 +26,7 @@ public class Child implements Node {
 
     @Override
     public int lookforItem(Node item) {
-        if(item == this)
-            return 0;
-        else
-            return -1;
+        return item.equals(this) ? 0 : -1;
     }
 
 

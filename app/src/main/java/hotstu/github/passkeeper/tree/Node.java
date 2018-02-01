@@ -21,7 +21,6 @@ public interface Node {
 
     int lookforItem(Node item);
 
-
     void setParent(Parent parent);
 
     Parent getParent();

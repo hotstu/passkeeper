@@ -10,6 +10,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
+import android.view.animation.AnimationUtils;
 
 import com.jakewharton.rxbinding2.widget.RxCompoundButton;
 import com.jakewharton.rxbinding2.widget.RxTextView;
@@ -28,10 +29,12 @@ import io.reactivex.functions.Consumer;
  */
 public class WatchdogActivity extends AppCompatActivity {
 
+    private ActivityWatchdogBinding binding;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        final ActivityWatchdogBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_watchdog);
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_watchdog);
 
         final WatchDogViewModel viewModel = ViewModelProviders.of(this, Injection.getViewModelFactory()).get(WatchDogViewModel.class);
 
@@ -72,6 +75,7 @@ public class WatchdogActivity extends AppCompatActivity {
                 onLoginOk(s);
             }
         });
+        viewModel.loginWrongEvent.observe(this, this::onLoginFaill);
     }
 
     public void onLoginOk(String key) {
@@ -79,6 +83,10 @@ public class WatchdogActivity extends AppCompatActivity {
         i.putExtra("key", key);
         startActivity(i);
         finish();
+    }
+
+    public void onLoginFaill(Void v) {
+        binding.etPassword.startAnimation(AnimationUtils.loadAnimation(this, R.anim.shake));
     }
 
 

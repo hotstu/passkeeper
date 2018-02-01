@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'project-report'
 android {
     compileSdkVersion 27
     buildToolsVersion "26.0.2"
@@ -6,8 +7,11 @@ android {
 
     Properties properties = new Properties()
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
-
+    dexOptions {
+        preDexLibraries = false
+    }
     defaultConfig {
+        multiDexEnabled true
         applicationId "hotstu.github.passkeeper"
         minSdkVersion 15
         targetSdkVersion 25
@@ -61,12 +65,18 @@ dependencies {
     implementation 'jp.wasabeef:recyclerview-animators:2.2.7'
     implementation 'io.reactivex.rxjava2:rxjava:2.1.8'
     implementation 'com.jakewharton.rxbinding2:rxbinding:2.0.0'
-    implementation 'android.arch.persistence.room:rxjava2:1.0.0'
-    implementation 'io.reactivex.rxjava2:rxandroid:2.0.1'
-    annotationProcessor 'android.arch.persistence.room:compiler:1.0.0'
-    // ViewModel and LiveData
-    implementation 'android.arch.lifecycle:extensions:1.0.0'
     implementation 'com.tbruyelle.rxpermissions2:rxpermissions:0.9.5'
-    annotationProcessor "android.arch.lifecycle:compiler:1.0.0"
+    implementation 'io.reactivex.rxjava2:rxandroid:2.0.1'
+
+    implementation "android.arch.lifecycle:extensions:1.1.0"
+    implementation 'android.arch.persistence.room:rxjava2:1.0.0'
+    annotationProcessor 'android.arch.persistence.room:compiler:1.0.0'
+    //  just ViewModel
+    implementation "android.arch.lifecycle:viewmodel:1.1.0"
+    //  just LiveData
+    implementation "android.arch.lifecycle:livedata:1.1.0"
+    implementation ('android.arch.lifecycle:reactivestreams:1.1.0')
+    // If your app uses Java 8, we recommend using this library instead of android.arch.lifecycle:compiler.
+    implementation "android.arch.lifecycle:common-java8:1.1.0"
     testCompile 'junit:junit:4.12'
 }

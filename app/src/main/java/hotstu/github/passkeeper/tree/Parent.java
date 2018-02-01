@@ -6,10 +6,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class Parent implements Node {
-    protected LinkedList<Node> children;
+    final private LinkedList<Node> children;
     private boolean open = false;
     private Parent parentNode = null;
 
+    public Parent() {
+        children = new LinkedList<>();
+    }
 
     @Override
     public boolean isLeaf() {
@@ -22,14 +25,10 @@ public class Parent implements Node {
 
     @Override
     public int getCount() {
-        if(open)
-            return getChildCount() + 1;
-        return 1;
+        return (open? getChildCount()  : 0) + 1;
     }
 
     public int getChildCount() {
-        if(children == null)
-            return 0;
         int count = 0;
         for (int i = 0; i < children.size(); i++) {
             count += children.get(i).getCount();
@@ -38,9 +37,6 @@ public class Parent implements Node {
     }
 
     public void addChildren(List<? extends Node> items) {
-        if (children == null) {
-            children = new LinkedList<>();
-        }
         if (items != null && items.size() > 0) {
             for (int i = 0; i < items.size(); i++) {
                 items.get(i).setParent(this);
@@ -50,9 +46,6 @@ public class Parent implements Node {
     }
 
     public void addChild(Node item, int position) {
-        if (children == null) {
-            children = new LinkedList<>();
-        }
         if(position > children.size()){
             throw new IndexOutOfBoundsException("position = " + position + "current len=" + children.size());
         }
@@ -64,20 +57,15 @@ public class Parent implements Node {
         item.setParent(this);
     }
 
-    public void removeChild(Node item) {
-        this.children.remove(item);
-    }
-
-
     public void clear() {
-        this.children = null;
+        this.children.clear();
     }
 
     @Override
     public Node findItem(final int index) {
         if(index == 0)
             return this;
-        else if(this.children != null){
+        else {
             int swapIndex = index - 1;
             for (int i = 0; i < this.children.size(); i++) {
                 Node child = this.children.get(i);
@@ -94,10 +82,10 @@ public class Parent implements Node {
 
     @Override
     public int lookforItem(Node item) {
-        if(item == this)
+        if(item.equals(this))
             return 0;
         else {
-            if (isOpen() && children != null) {
+            if (isOpen() ) {
                 int swap = 0;
                 int i = 0;
                 for (; i < children.size(); i++) {
@@ -112,9 +100,10 @@ public class Parent implements Node {
         return RecyclerView.NO_POSITION;
     }
 
-    public LinkedList<Node> getChildren() {
+    public List<Node> getChildren() {
         return children;
     }
+
 
     @Override
     public void setParent(Parent parent) {

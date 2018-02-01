@@ -19,17 +19,20 @@ public class WatchDogViewModel extends AndroidViewModel {
     private final AppDatabase db;
     public MutableLiveData<String> input;
     public final SingleLiveEvent<String> loginOkEvent;
+    public final SingleLiveEvent<Void> loginWrongEvent;
 
     public WatchDogViewModel(@NonNull Application application, AppDatabase db) {
         super(application);
         this.db = db;
         this.input = new MutableLiveData<>();
         this.loginOkEvent = new SingleLiveEvent<>();
+        this.loginWrongEvent = new SingleLiveEvent<>();
     }
 
     public void login() {
         String inputText = input.getValue();
         if (inputText == null || "".equals(inputText)) {
+            loginWrongEvent.call();
             return;
         }
         final String hash = db.hashModel().checkHash();
@@ -41,6 +44,8 @@ public class WatchDogViewModel extends AndroidViewModel {
             final String newhash = Util.md5(PassKeepApp.sInstance.getSalt() + inputText);
             db.hashModel().addHash(new HashEntity(newhash));
             loginOkEvent.setValue(inputText);
+        } else {
+            loginWrongEvent.call();
         }
     }
 }

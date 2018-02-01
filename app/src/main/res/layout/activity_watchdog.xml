@@ -1,6 +1,7 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
     <data>
 
         <variable
@@ -8,47 +9,49 @@
             type="hotstu.github.passkeeper.viewmodel.WatchDogViewModel" />
 
     </data>
-    <LinearLayout
-    android:layout_width="300dp"
-    android:layout_height="wrap_content"
-    android:padding="20dp"
-    android:gravity="center"
-    android:orientation="vertical">
-
-    <TextView
-        android:id="@+id/textView1"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/hello_world" />
-
-    <EditText
-        android:id="@+id/etPassword"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:inputType="textPassword">
-
-        <requestFocus />
-    </EditText>
-
-    <CheckBox
-        android:id="@+id/cbShowPwd"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/show_pwd" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
-        android:gravity="center">
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <Button
-            android:id="@+id/btn_ok"
-            style="@style/Widget.AppCompat.Button.Borderless.Colored"
-            android:layout_width="70dp"
+        <TextView
+            android:id="@+id/textView1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:onClick="@{() ->  viewModel.login()}"
-            android:text="确定" />
+            android:text="@string/hello_world" />
+
+        <EditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="textPassword">
+
+            <requestFocus />
+        </EditText>
+
+        <CheckBox
+            android:id="@+id/cbShowPwd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/show_pwd" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btn_ok"
+                style="@style/Widget.AppCompat.Button.Borderless.Colored"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:onClick="@{() ->  viewModel.login()}"
+                android:text="确定" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
 </layout>
