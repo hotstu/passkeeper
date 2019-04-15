@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="hotstu.github.passkeeper">
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -9,23 +10,24 @@
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme"
+        tools:ignore="GoogleAppIndexingWarning">
         <activity
             android:name="hotstu.github.passkeeper.ListActivity"
             android:autoRemoveFromRecents="true"
-            android:noHistory="true"
-            android:exported="false"
             android:excludeFromRecents="true"
-            android:label="@string/app_name" >
+            android:exported="false"
+            android:label="@string/app_name"
+            android:noHistory="true">
 
         </activity>
         <activity
             android:name="hotstu.github.passkeeper.WatchdogActivity"
-            android:excludeFromRecents="true"
             android:autoRemoveFromRecents="true"
+            android:excludeFromRecents="true"
+            android:label="@string/app_name"
             android:noHistory="true"
-            android:theme="@style/Theme.AppCompat.Dialog"
-            android:label="@string/app_name" >
+            android:theme="@style/Theme.AppCompat.Dialog">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -37,8 +39,8 @@
         <provider
             android:name="android.support.v4.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
-            android:grantUriPermissions="true"
-            android:exported="false">
+            android:exported="false"
+            android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
