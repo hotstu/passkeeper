@@ -9,8 +9,11 @@ import org.junit.Test;
 public class CompositeObserverTest {
     @Test
     public void test1() {
-        MyTestClass o = new MyTestClass();
-        System.out.println(o.getTag());
-        assert  o.getClass().getCanonicalName().equals(o.getTag());
+        try {
+            MyClass.class.newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 }
